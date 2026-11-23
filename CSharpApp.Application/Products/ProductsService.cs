@@ -20,7 +20,7 @@ public class ProductsService : IProductsService
 
     public async Task<IReadOnlyCollection<Product>> GetProducts()
     {
-        _httpClient.BaseAddress = new Uri(_restApiSettings.BaseUrl!);
+        _httpClient.BaseAddress = new Uri(_restApiSettings.BaseUrl);
         var response = await _httpClient.GetAsync(_restApiSettings.Products);
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync();

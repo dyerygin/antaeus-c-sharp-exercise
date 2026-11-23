@@ -1,32 +1,69 @@
-var builder = WebApplication.CreateBuilder(args);
+using Microsoft.AspNetCore.Routing;
+using Serilog.Events;
 
-var logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger();
-builder.Logging.ClearProviders().AddSerilog(logger);
+// F-13: a bootstrap logger reports start-up failures (for example invalid settings) before configuration is read.
+// It is a plain logger, not Serilog's reloadable one: that one can be frozen once per process, which breaks a second
+// host in the same process (every WebApplicationFactory in the tests). Each host builds its own logger instead.
+Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-builder.Services.AddDefaultConfiguration();
-builder.Services.AddHttpConfiguration();
-builder.Services.AddProblemDetails();
-builder.Services.AddApiVersioning(options => options.ApiVersionReader = new UrlSegmentApiVersionReader());
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+try
 {
-    app.MapOpenApi();
-}
+    var builder = WebApplication.CreateBuilder(args);
 
-var versionedEndpointRouteBuilder = app.NewVersionedApi();
+    builder.Services.AddSerilog((services, logger) => logger
+        .ReadFrom.Configuration(builder.Configuration)
+        .ReadFrom.Services(services),
+        preserveStaticLogger: true);
 
-versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/getproducts", async (IProductsService productsService) =>
+    builder.Services.AddOpenApi();
+    builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddOptions<PagingSettings>()
+        .BindConfiguration(PagingSettings.SectionName)
+        .ValidateDataAnnotations()
+        .ValidateOnStart();
+    builder.Services.AddProblemDetails();
+    builder.Services.AddApiVersioning(options => options.ApiVersionReader = new UrlSegmentApiVersionReader());
+
+    var app = builder.Build();
+
+    // T8: one line per request with method, route template, status and time; no query string, headers, body or client IP.
+    app.UseSerilogRequestLogging(options =>
     {
-        var products = await productsService.GetProducts();
-        return products;
-    })
-    .WithName("GetProducts")
-    .HasApiVersion(1.0);
+        // The static logger is the bootstrap one (above), so request events go to this host's configured logger.
+        options.Logger = app.Services.GetRequiredService<Serilog.ILogger>();
+        options.MessageTemplate = "HTTP {RequestMethod} {RoutePattern} responded {StatusCode} in {Elapsed:0.0000} ms";
+        options.GetMessageTemplateProperties = (context, _, elapsed, statusCode) =>
+        [
+            new("RequestMethod", new ScalarValue(context.Request.Method)),
+            new("RoutePattern", new ScalarValue((context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "(unmatched)")),
+            new("StatusCode", new ScalarValue(statusCode)),
+            new("Elapsed", new ScalarValue(elapsed)),
+        ];
+    });
 
-await app.RunAsync();
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+    }
+
+    var versionedEndpointRouteBuilder = app.NewVersionedApi();
+
+    versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/getproducts", async (IProductsService productsService) =>
+        {
+            var products = await productsService.GetProducts();
+            return products;
+        })
+        .WithName("GetProducts")
+        .HasApiVersion(1.0);
+
+    await app.RunAsync();
+}
+catch (Exception ex) when (ex is not HostAbortedException)
+{
+    Log.Fatal(ex, "The API failed to start");
+    Environment.ExitCode = 1;
+}
+finally
+{
+    await Log.CloseAndFlushAsync();
+}
