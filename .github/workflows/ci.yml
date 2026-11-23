@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  build-test:
+    name: Build, test, coverage, vulnerable packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore (locked mode)
+        run: dotnet restore --locked-mode
+
+      - name: Build (warnings as errors)
+        run: dotnet build --no-restore -warnaserror
+
+      - name: Format check
+        run: dotnet format --verify-no-changes --no-restore
+
+      - name: Test with coverage
+        run: dotnet test --no-build --coverlet --coverlet-output-format cobertura --results-directory TestResults
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: TestResults/*.xml
+          if-no-files-found: warn
+
+      # `dotnet list package --vulnerable` exits 0 even when it finds something, so the JSON is parsed.
+      - name: Vulnerable packages (direct and transitive)
+        run: |
+          dotnet list package --vulnerable --include-transitive --format json > vulnerable.json
+          count=$(jq '[.. | objects | .vulnerabilities? // empty | .[]] | length' vulnerable.json)
+          if [ "$count" -ne 0 ]; then
+            jq '.projects[] | select(.frameworks) ' vulnerable.json
+            echo "::error::$count vulnerable package(s) found"
+            exit 1
+          fi
+          echo "No vulnerable packages."
+
+  lint:
+    name: Lint (Dockerfiles, workflows, Markdown, secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Linters run from pinned images: the repository allows only GitHub-owned and verified actions.
+      - name: hadolint
+        if: hashFiles('**/Dockerfile') != ''
+        run: |
+          git ls-files '*Dockerfile' | xargs -I{} sh -c \
+            'echo "hadolint {}"; docker run --rm -i hadolint/hadolint:v2.15.1 < "{}"'
+
+      - name: actionlint
+        run: docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:1.7.12 -color
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # README.md is still the exercise statement; it moves to docs/TASK.md (kept verbatim, excluded).
+      - name: markdownlint
+        run: npx --yes markdownlint-cli2@0.24.2 "**/*.md" "#README.md" "#docs/TASK.md" "#**/bin/**" "#**/obj/**"
+
+      # Both scans read .gitleaksignore: history fingerprints and working-tree fingerprints (relative paths).
+      - name: gitleaks (history)
+        run: docker run --rm -v "$PWD":/repo -w /repo zricethezav/gitleaks:v8.30.1 git --redact --no-banner .
+
+      - name: gitleaks (working tree)
+        run: docker run --rm -v "$PWD":/repo -w /repo zricethezav/gitleaks:v8.30.1 dir --redact --no-banner .
+
+  commit-messages:
+    name: Conventional Commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check every commit subject in the pull request
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          pattern='^(feat|fix|refactor|test|docs|build|ci|chore|perf)(\([a-z0-9-]+\))?!?: .{1,72}$'
+          bad=0
+          while IFS= read -r subject; do
+            if ! printf '%s\n' "$subject" | grep -Eq "$pattern"; then
+              echo "::error::Not a Conventional Commit subject: $subject"
+              bad=1
+            fi
+          done < <(git log --no-merges --format=%s "$BASE_SHA..$HEAD_SHA")
+          exit "$bad"

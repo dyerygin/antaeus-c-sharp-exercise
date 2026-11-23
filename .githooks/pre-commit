@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Optional local hook (enable with: git config core.hooksPath .githooks). CI enforces the same checks.
+set -euo pipefail
+
+dotnet format --verify-no-changes
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --pre-commit --staged --redact --no-banner .
+else
+  echo "pre-commit: gitleaks not installed, secret scan skipped (CI runs it)." >&2
+fi

@@ -1,0 +1,11 @@
+# F-20: sample JWTs of the defunct public demo service in the supplied collections (base commit cf97a27).
+# History scans (gitleaks git):
+cf97a2776b05f451c9b23ff2941b6452996fd880:postman.json:jwt:465
+cf97a2776b05f451c9b23ff2941b6452996fd880:postman.json:jwt:1163
+cf97a2776b05f451c9b23ff2941b6452996fd880:postman.json:jwt:1197
+cf97a2776b05f451c9b23ff2941b6452996fd880:insomnia.json:jwt:1
+# Working-tree scans (gitleaks dir / pre-commit):
+postman.json:jwt:465
+postman.json:jwt:1163
+postman.json:jwt:1197
+insomnia.json:jwt:1

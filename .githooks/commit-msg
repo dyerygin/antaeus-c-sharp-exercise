@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Optional local hook (enable with: git config core.hooksPath .githooks). CI checks pull requests the same way.
+set -euo pipefail
+
+subject=$(head -n 1 "$1")
+pattern='^(feat|fix|refactor|test|docs|build|ci|chore|perf)(\([a-z0-9-]+\))?!?: .{1,72}$'
+case "$subject" in
+  Merge\ *|Revert\ *|fixup!\ *|squash!\ *) exit 0 ;;
+esac
+if ! printf '%s\n' "$subject" | grep -Eq "$pattern"; then
+  echo "commit-msg: subject must be a Conventional Commit, at most 72 characters after the type:" >&2
+  echo "  type(scope): summary   with type in feat|fix|refactor|test|docs|build|ci|chore|perf" >&2
+  echo "  got: $subject" >&2
+  exit 1
+fi
