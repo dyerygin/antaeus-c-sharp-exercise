@@ -18,10 +18,10 @@ public sealed class StubHttpMessageHandler(Func<HttpRequestMessage, Cancellation
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
-        _requests.Enqueue(new RecordedRequest(request.Method, request.RequestUri!, body));
+        _requests.Enqueue(new RecordedRequest(request.Method, request.RequestUri!, body, request.Headers.Authorization?.ToString()));
         return await respond(request, cancellationToken);
     }
 
     /// <summary>What the handler received; the body is read eagerly because the request is disposed afterwards.</summary>
-    public sealed record RecordedRequest(HttpMethod Method, Uri Uri, string? Body);
+    public sealed record RecordedRequest(HttpMethod Method, Uri Uri, string? Body, string? Authorization = null);
 }

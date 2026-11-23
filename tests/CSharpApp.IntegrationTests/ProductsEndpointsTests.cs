@@ -25,7 +25,7 @@ public sealed class ProductsEndpointsTests : IAsyncLifetime
         using var response = await client.GetAsync(new Uri("/api/v1/products", UriKind.Relative), Ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var url = Assert.Single(_factory.Upstream.LogEntries).RequestMessage!.Url;
+        var url = Assert.Single(_factory.Upstream.ResourceEntries).RequestMessage!.Url;
         Assert.EndsWith("/api/v1/products?offset=0&limit=20", url, StringComparison.Ordinal);
     }
 
@@ -38,7 +38,7 @@ public sealed class ProductsEndpointsTests : IAsyncLifetime
         using var response = await client.GetAsync(new Uri("/api/v1/products?offset=40&limit=100", UriKind.Relative), Ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var url = Assert.Single(_factory.Upstream.LogEntries).RequestMessage!.Url;
+        var url = Assert.Single(_factory.Upstream.ResourceEntries).RequestMessage!.Url;
         Assert.EndsWith("/api/v1/products?offset=40&limit=100", url, StringComparison.Ordinal);
     }
 
@@ -114,6 +114,6 @@ public sealed class ProductsEndpointsTests : IAsyncLifetime
         using var response = await client.PostAsJsonAsync(new Uri("/api/v1/products", UriKind.Relative), CreateBody, Ct);
 
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
-        Assert.Single(_factory.Upstream.LogEntries);
+        Assert.Single(_factory.Upstream.ResourceEntries);
     }
 }

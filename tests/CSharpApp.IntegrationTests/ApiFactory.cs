@@ -14,6 +14,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     /// <summary>The fake upstream; stub it per test (see <see cref="UpstreamStubs"/>).</summary>
     public WireMockServer Upstream { get; } = WireMockServer.Start();
 
+    /// <summary>The access token the upstream login stub hands out (ADR-0014); every resource call carries it.</summary>
+    public string UpstreamToken { get; }
+
+    public ApiFactory() => UpstreamToken = Upstream.StubLogin();
+
     /// <summary>Settings a test overrides on top of the defaults below, applied last.</summary>
     public IDictionary<string, string?> Settings { get; } = new Dictionary<string, string?>(StringComparer.Ordinal);
 

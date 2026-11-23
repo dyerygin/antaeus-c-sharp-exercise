@@ -5,7 +5,7 @@ using Microsoft.Extensions.Http.Resilience;
 
 namespace CSharpApp.Infrastructure;
 
-/// <summary>Registers the infrastructure layer: settings validated on start and the typed upstream clients.</summary>
+/// <summary>Registers the infrastructure layer: settings validated on start, the typed upstream clients and their auth.</summary>
 public static class DependencyInjection
 {
     extension(IServiceCollection services)
@@ -30,6 +30,7 @@ public static class DependencyInjection
             services.TryAddSingleton(TimeProvider.System);
             services.AddSingleton<AccessTokenProvider>();
             services.AddSingleton<IAccessTokenProvider>(provider => provider.GetRequiredService<AccessTokenProvider>());
+            services.AddTransient<BearerTokenHandler>();
             return services;
         }
     }
@@ -52,6 +53,9 @@ public static class DependencyInjection
             options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(Math.Max(30, 2 * settings.AttemptTimeoutSeconds));
         });
 
+        // ADR-0014: added after resilience, so it runs inside it: every attempt carries the current token and a 401
+        // resend stays within that attempt's timeout.
+        builder.AddHttpMessageHandler<BearerTokenHandler>();
     }
 
     /// <summary>A4: never follow redirects to another host; recycle pooled connections so DNS changes are seen.</summary>

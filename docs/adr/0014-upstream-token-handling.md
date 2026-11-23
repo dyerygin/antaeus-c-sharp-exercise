@@ -1,4 +1,4 @@
-# ADR-0014: Upstream token handling: cache, single-flight login, refresh then re-login
+# ADR-0014: Upstream token handling: cache, single-flight login, refresh then re-login, one 401 retry
 
 Status: Accepted\
 Date: 2026-11-23
@@ -16,6 +16,10 @@ guards only `auth/profile` (ASM-06), so the 401 path is exercised against our mo
 - `AccessTokenProvider` (singleton) caches until `exp` minus `min(60 s, 10 % of the lifetime)`, or 5 minutes without a
   readable `exp`; a `SemaphoreSlim` with a double check gives one login for concurrent callers and is released in
   `finally`; refresh first, then login. `Invalidate` drops only the token that was rejected.
+- `BearerTokenHandler` on the products and categories clients, inside the resilience handler: it sets the Bearer header
+  and, on a 401, invalidates the token and resends **once** with a new one (the body buffered before the first send).
+  This is the one exception to "never retry POST" (ADR-0004): the upstream rejects a 401 before processing it. A second
+  401 is returned and mapped to 502 (ADR-0005), so a revoked account cannot loop.
 
 ## Alternatives considered
 
@@ -24,8 +28,10 @@ guards only `auth/profile` (ASM-06), so the 401 path is exercised against our mo
 ## Consequences
 
 - Concurrent first requests cause one login; a hanging login ends at its own timeout; the cache is per instance.
+- An expired or revoked token costs one extra upstream call; the resend counts inside the attempt's timeout.
 
 ## Links
 
 ASM-04, ASM-06, ASM-15. Tests: `GetTokenAsync_ConcurrentCallers_LoginOnce`, `OneMinuteToken_LoginOnceThenReuse`,
-`Login_Hangs_TimesOutAndReleasesLock`, `Invalidate_StaleToken_KeepsCurrent`.
+`Login_Hangs_TimesOutAndReleasesLock`, `Invalidate_StaleToken_KeepsCurrent`, `Send_401Twice_RetriesOnce`,
+`Send_Post401_ResendsSameBody`, `Create_Upstream401Twice_ResentOnceThenUnavailable`.

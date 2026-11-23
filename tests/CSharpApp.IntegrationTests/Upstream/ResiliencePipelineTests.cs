@@ -3,6 +3,7 @@ using CSharpApp.Core.Dtos;
 using CSharpApp.Core.Exceptions;
 using CSharpApp.Core.Interfaces;
 using CSharpApp.Infrastructure;
+using CSharpApp.Infrastructure.Auth;
 using CSharpApp.TestData.Builders;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,7 @@ public sealed class ResiliencePipelineTests : IDisposable
 {
     private readonly WireMockServer _upstream = WireMockServer.Start();
     private readonly ServiceProvider _services;
+    private readonly string _token;
 
     public ResiliencePipelineTests()
     {
@@ -35,6 +37,7 @@ public sealed class ResiliencePipelineTests : IDisposable
             ["HttpClientSettings:TotalTimeoutSeconds"] = "5",
         }).Build();
         _services = new ServiceCollection().AddLogging().AddInfrastructure(configuration).BuildServiceProvider();
+        _token = _upstream.StubLogin();
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -55,7 +58,7 @@ public sealed class ResiliencePipelineTests : IDisposable
         await Assert.ThrowsAsync<UpstreamUnavailableException>(() =>
             client.CreateAsync(new NewProduct("Lamp", 10m, "A lamp", 1, ["https://images.test/lamp.png"]), Ct));
 
-        Assert.Single(_upstream.LogEntries);
+        Assert.Single(_upstream.ResourceEntries);
     }
 
     [Fact]
@@ -73,7 +76,7 @@ public sealed class ResiliencePipelineTests : IDisposable
         var products = await client.GetAllAsync(0, 20, Ct);
 
         Assert.Single(products);
-        Assert.Equal(2, _upstream.LogEntries.Count);
+        Assert.Equal(2, _upstream.ResourceEntries.Count);
     }
 
     [Fact]
@@ -87,7 +90,7 @@ public sealed class ResiliencePipelineTests : IDisposable
         await client.GetAllAsync(0, 20, Ct);
         await _services.GetRequiredService<IProductsClient>().GetAllAsync(0, 20, Ct);
 
-        Assert.Equal(2, _upstream.LogEntries.Count);
+        Assert.Equal(2, _upstream.ResourceEntries.Count);
     }
 
     [Theory]
@@ -126,5 +129,67 @@ public sealed class ResiliencePipelineTests : IDisposable
         var primary = Assert.IsType<SocketsHttpHandler>(handler);
         Assert.False(primary.AllowAutoRedirect);
         Assert.Equal(TimeSpan.FromMinutes(2), primary.PooledConnectionLifetime);
+    }
+
+    [Fact]
+    public async Task GetAll_SendsBearerTokenFromOneLogin()
+    {
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingGet().WithHeader("Authorization", $"Bearer {_token}"))
+            .AtPriority(1)
+            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json").WithBody("[]"));
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingGet())
+            .AtPriority(2)
+            .RespondWith(Response.Create().WithStatusCode(401));
+        var client = _services.GetRequiredService<IProductsClient>();
+
+        await client.GetAllAsync(0, 20, Ct);
+        await client.GetAllAsync(0, 20, Ct);
+
+        Assert.Equal(2, _upstream.ResourceEntries.Count);
+        Assert.Single(_upstream.LoginEntries);
+    }
+
+    [Fact]
+    public async Task Create_Upstream401Twice_ResentOnceThenUnavailable()
+    {
+        // R15: one resend after 401 even for POST (rejected before processing); the second 401 → 502, no loop.
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(401));
+        var client = _services.GetRequiredService<IProductsClient>();
+
+        await Assert.ThrowsAsync<UpstreamUnavailableException>(() =>
+            client.CreateAsync(new NewProduct("Lamp", 10m, "A lamp", 1, ["https://images.test/lamp.png"]), Ct));
+
+        Assert.Equal(2, _upstream.ResourceEntries.Count);
+    }
+
+    [Theory]
+    [InlineData(nameof(IProductsClient))]
+    [InlineData(nameof(ICategoriesClient))]
+    public void ResourceClients_HaveBearerHandlerInsideResilience(string clientName)
+    {
+        // ADR-0014: below the resilience handler, so each retry attempt gets the current token.
+        var chain = new List<Type>();
+        HttpMessageHandler handler = _services.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(clientName);
+        while (handler is DelegatingHandler delegating)
+        {
+            chain.Add(delegating.GetType());
+            handler = delegating.InnerHandler!;
+        }
+
+        var bearer = chain.IndexOf(typeof(BearerTokenHandler));
+        var resilience = chain.FindIndex(t => t.Name.Contains("Resilience", StringComparison.Ordinal));
+        Assert.True(resilience >= 0 && bearer > resilience, string.Join(" -> ", chain.Select(t => t.Name)));
+    }
+
+    [Fact]
+    public void AuthClient_HasNoBearerHandler()
+    {
+        HttpMessageHandler handler = _services.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler("IAuthClient");
+        while (handler is DelegatingHandler delegating)
+        {
+            Assert.IsNotType<BearerTokenHandler>(delegating);
+            handler = delegating.InnerHandler!;
+        }
     }
 }

@@ -25,7 +25,7 @@ public sealed class CategoriesEndpointsTests : IAsyncLifetime
         using var response = await client.GetAsync(new Uri("/api/v1/categories", UriKind.Relative), Ct);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.EndsWith("/api/v1/categories?limit=20", Assert.Single(_factory.Upstream.LogEntries).RequestMessage!.Url, StringComparison.Ordinal);
+        Assert.EndsWith("/api/v1/categories?limit=20", Assert.Single(_factory.Upstream.ResourceEntries).RequestMessage!.Url, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -64,6 +64,6 @@ public sealed class CategoriesEndpointsTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.EndsWith("/api/v1/categories/6", response.Headers.Location?.ToString(), StringComparison.Ordinal);
-        Assert.Single(_factory.Upstream.LogEntries);
+        Assert.Single(_factory.Upstream.ResourceEntries);
     }
 }
