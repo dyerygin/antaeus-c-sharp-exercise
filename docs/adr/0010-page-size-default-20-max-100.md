@@ -11,7 +11,8 @@ everything (ASM-01). We set a default and a maximum page size for our list endpo
 
 ## Decision
 
-- `GET /api/v1/products` takes `offset` (≥ 0, default 0) and `limit` (`[Range(1, 100)]`).
+- `GET /api/v1/products` takes `offset` (≥ 0, default 0) and `limit` (`[Range(1, 100)]`); `GET /api/v1/categories` takes
+  `limit` only (the upstream has no offset there).
 - A missing `limit` uses `PagingSettings.DefaultLimit` = 20; `[Range(1, 100)]` is the single source of the maximum.
 - Both values go to the upstream; an out-of-range value returns 400 (ADR-0008) and makes no upstream call.
 
@@ -28,4 +29,4 @@ everything (ASM-01). We set a default and a maximum page size for our list endpo
 ## Links
 
 Finding F-12; ASM-01; ADR-0008. Tests: `GetProducts_NoLimit_UsesDefault20`, `GetProducts_LimitOver100_Returns400`,
-`GetAll_SendsOffsetAndLimit`.
+`GetAll_SendsOffsetAndLimit`, `GetCategories_NoLimit_UsesDefault20`.

@@ -45,3 +45,20 @@ Content-Type: application/json
   "categoryId": 999999,
   "images": ["https://placehold.co/600x400"]
 }
+
+### List categories (default 20)
+GET {{HostAddress}}/api/{{Version}}/categories
+Accept: application/json
+
+### One category
+GET {{HostAddress}}/api/{{Version}}/categories/1
+Accept: application/json
+
+### Create a category → 201 with Location (no read-back: stored as sent)
+POST {{HostAddress}}/api/{{Version}}/categories
+Content-Type: application/json
+
+{
+  "name": "Books",
+  "image": "https://placehold.co/600x400"
+}

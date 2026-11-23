@@ -57,6 +57,7 @@ try
     }
 
     app.MapProductsEndpoints();
+    app.MapCategoriesEndpoints();
 
     await app.RunAsync();
 }

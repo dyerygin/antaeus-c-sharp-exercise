@@ -13,6 +13,7 @@ references FluentValidation but validates no input (F-17, F-18). ASP.NET Core 10
 
 - `AddValidation()` with DataAnnotations; FluentValidation is removed. `CreateProductRequest`: `Title` 1–200, `Price`
   0.01–1 000 000, `Description` 1–2000, `CategoryId` ≥ 1, `Images` 1–10 absolute http(s) URLs (`[AbsoluteHttpUrls]`).
+  `CreateCategoryRequest`: `Name` 1–100, `Image` one absolute http(s) URL (`[AbsoluteHttpUrl]`).
 - `offset` ≥ 0, `limit` in `[Range(1, 100)]` (the single source of the maximum, ADR-0010), `id` ≥ 1.
 - Rules that need the upstream stay in Application: an unknown `categoryId` raises `RequestValidationException`.
 
@@ -28,4 +29,4 @@ references FluentValidation but validates no input (F-17, F-18). ASP.NET Core 10
 ## Links
 
 F-12, F-17, F-18. Tests: `ProductsValidationTests`, `AbsoluteHttpUrlsAttributeTests`,
-`CreateProduct_UnknownCategory_Returns400OnCategoryId`.
+`CreateProduct_UnknownCategory_Returns400OnCategoryId`, `CategoriesValidationTests`.
