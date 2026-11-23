@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 
 namespace CSharpApp.IntegrationTests;
@@ -77,6 +78,9 @@ public sealed class RequestBodyTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Empty(_factory.Upstream.LogEntries);
+        // Review B I1: rejected by the strict JSON reader (X1); [Required] on Title would also give 400, but with errors.title.
+        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+        Assert.False(problem.RootElement.TryGetProperty("errors", out _));
     }
 
     [Fact]
