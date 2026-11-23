@@ -1,0 +1,68 @@
+# The API with the contract mock of the offline upstream (ADR-0003, ADR-0017).
+#   cp .env.example .env            (PowerShell: Copy-Item .env.example .env)
+#   docker compose up --build -d --wait
+name: csharpapp
+
+# Container hardening shared by both services: read-only root, no capabilities, no privilege gain, bounded resources.
+x-hardening: &hardening
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  mem_limit: 512m
+  cpus: 1.0
+
+services:
+  upstream-mock:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: mocks/CSharpApp.UpstreamMock/Dockerfile
+    image: csharpapp-upstream-mock:local
+    environment:
+      # Stricter than the original (ASM-06), so the API's bearer token and 401 handling run for real (ADR-0014).
+      MockAuth__RequireTokenOnResources: "true"
+      MockAuth__AccessTokenMinutes: "5"
+    ports:
+      - "${MOCK_PORT:-8081}:8080"
+    healthcheck:
+      test: ["CMD", "dotnet", "CSharpApp.UpstreamMock.dll", "--health-probe"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+      start_interval: 2s
+
+  api:
+    <<: *hardening
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: csharpapp-api:local
+    depends_on:
+      upstream-mock:
+        condition: service_healthy
+    environment:
+      RestApiSettings__BaseUrl: http://upstream-mock:8080/api/v1/
+      RestApiSettings__Username: ${UPSTREAM_USERNAME:?copy .env.example to .env}
+      RestApiSettings__Password: ${UPSTREAM_PASSWORD:?copy .env.example to .env}
+      # Read only when API keys are enabled on write endpoints (ADR-0012).
+      ApiAuth__Keys__0__ClientId: demo
+      ApiAuth__Keys__0__Key: ${API_KEY:-}
+      OpenApi__Enabled: "true"
+      # The health probe calls 127.0.0.1; host tools call localhost or host.docker.internal. Behind a real host name,
+      # list that name instead.
+      AllowedHosts: localhost;127.0.0.1;host.docker.internal
+      RateLimiting__PermitLimit: ${RATE_LIMIT_PERMITS:-100}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "dotnet", "CSharpApp.Api.dll", "--health-probe"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+      start_interval: 2s

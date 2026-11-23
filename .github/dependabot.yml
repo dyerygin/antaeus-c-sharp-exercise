@@ -21,3 +21,15 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories:
+      - "/"
+      - "/mocks/CSharpApp.UpstreamMock"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    ignore:
+      # The .NET major version is a deliberate choice.
+      - dependency-name: "dotnet/*"
+        update-types: ["version-update:semver-major"]
