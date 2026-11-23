@@ -17,7 +17,6 @@ public sealed class ErrorMappingTests : IAsyncLifetime
     [Theory]
     [InlineData(503, """{"message":"upstream internals"}""", HttpStatusCode.BadGateway)]
     [InlineData(200, "null", HttpStatusCode.BadGateway)]
-    [InlineData(200, "<html>", HttpStatusCode.BadGateway)]
     public async Task GetProducts_UpstreamFailure_ReturnsProblemWithTraceId(int upstreamStatus, string upstreamBody, HttpStatusCode expected)
     {
         _factory.Upstream.StubRaw("GET", "products", upstreamStatus, upstreamBody);
@@ -34,7 +33,19 @@ public sealed class ErrorMappingTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetProducts_UpstreamUnreachable_Returns502()
+    public async Task Upstream_MalformedJson_Returns502()
+    {
+        _factory.Upstream.StubRaw("GET", "products", 200, "<html>not json</html>");
+        using var client = _factory.CreateClient();
+
+        using var response = await client.GetAsync(new Uri("/api/v1/getproducts", UriKind.Relative), Ct);
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        Assert.DoesNotContain("not json", await response.Content.ReadAsStringAsync(Ct), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Upstream_ConnectionRefused_Returns502()
     {
         _factory.Upstream.Stop();
         using var client = _factory.CreateClient();
