@@ -66,4 +66,19 @@ public sealed class CategoriesEndpointsTests : IAsyncLifetime
         Assert.EndsWith("/api/v1/categories/6", response.Headers.Location?.ToString(), StringComparison.Ordinal);
         Assert.Single(_factory.Upstream.ResourceEntries);
     }
+
+    [Fact]
+    public async Task CreateCategory_UpstreamRejects_Returns400()
+    {
+        // ADR-0005: the upstream's own 400 (not EntityNotFoundError) is a 400 for the caller; its message stays in the logs.
+        _factory.Upstream.StubRaw("POST", "categories", 400, """{"statusCode":400,"message":["upstream internals"],"error":"Bad Request"}""");
+        using var client = _factory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(new Uri("/api/v1/categories", UriKind.Relative), new { name = "Books", image = "https://images.test/books.png" }, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.DoesNotContain("upstream internals", await response.Content.ReadAsStringAsync(Ct), StringComparison.Ordinal);
+        Assert.Single(_factory.Upstream.ResourceEntries);
+    }
 }
