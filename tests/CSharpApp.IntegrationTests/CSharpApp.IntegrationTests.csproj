@@ -24,6 +24,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\CSharpApp.Api\CSharpApp.Api.csproj" />
+    <!-- R10: the mock also has a top-level Program; the alias keeps the API's Program the unqualified one. -->
+    <ProjectReference Include="..\..\mocks\CSharpApp.UpstreamMock\CSharpApp.UpstreamMock.csproj" Aliases="mock" />
   </ItemGroup>
 
 </Project>
