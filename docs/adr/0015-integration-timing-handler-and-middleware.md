@@ -27,7 +27,8 @@ sees only inbound requests; the integration is the outbound `HttpClient` pipelin
 
 ## Consequences
 
-- The upstream time includes retries, the token and the 401 resend: what the caller waits for. The counter is read with
+- The upstream time includes retries, the token and the 401 resend, up to the response headers (bodies stream after
+  them, so a slow body shows in the inbound line, not the upstream one). The counter is read with
   `dotnet-counters monitor --counters CSharpApp.Upstream`; nothing exports it yet.
 
 ## Links

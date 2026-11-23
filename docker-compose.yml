@@ -49,9 +49,9 @@ services:
       RestApiSettings__BaseUrl: http://upstream-mock:8080/api/v1/
       RestApiSettings__Username: ${UPSTREAM_USERNAME:?copy .env.example to .env}
       RestApiSettings__Password: ${UPSTREAM_PASSWORD:?copy .env.example to .env}
-      # Read only when API keys are enabled on write endpoints (ADR-0012).
+      # The key the write endpoints require (ADR-0012); start-up fails without one.
       ApiAuth__Keys__0__ClientId: demo
-      ApiAuth__Keys__0__Key: ${API_KEY:-}
+      ApiAuth__Keys__0__Key: ${API_KEY:?copy .env.example to .env}
       OpenApi__Enabled: "true"
       # The health probe calls 127.0.0.1; host tools call localhost or host.docker.internal. Behind a real host name,
       # list that name instead.

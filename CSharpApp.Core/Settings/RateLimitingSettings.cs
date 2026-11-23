@@ -3,7 +3,10 @@ using System.ComponentModel.DataAnnotations;
 namespace CSharpApp.Core.Settings;
 
 /// <summary>Fixed-window rate limit of the <c>/api</c> endpoints (section <c>RateLimiting</c>), validated on start.</summary>
-/// <remarks>ADR-0016: per remote IP, so one client cannot exhaust the upstream for the others; health is exempt.</remarks>
+/// <remarks>
+/// ADR-0016: per API client (<c>client_id</c>), else per remote IP, so one client cannot exhaust the upstream for the
+/// others; health is exempt.
+/// </remarks>
 public sealed class RateLimitingSettings
 {
     public const string SectionName = "RateLimiting";
