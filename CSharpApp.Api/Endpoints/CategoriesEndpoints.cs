@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CSharpApp.Api.Contracts;
+using CSharpApp.Api.Idempotency;
 using CSharpApp.Api.RateLimiting;
 using CSharpApp.Api.Security;
 using CSharpApp.Application.Categories;
@@ -34,6 +35,7 @@ public static class CategoriesEndpoints
             categories.MapPost("", CreateCategoryAsync)
                 .WithName("CreateCategory")
                 .RequireAuthorization(ApiKeyAuthentication.WritePolicy)
+                .WithIdempotency<CreateCategoryRequest>()
                 .ProducesProblems(
                     StatusCodes.Status400BadRequest,
                     StatusCodes.Status401Unauthorized,

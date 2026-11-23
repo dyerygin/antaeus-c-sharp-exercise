@@ -33,7 +33,7 @@ public sealed class OpenApiTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task OpenApi_CreateOperations_RequireApiKey_GetsDoNot()
+    public async Task OpenApi_CreateOperations_DocumentApiKeyAndIdempotency_GetsDoNot()
     {
         _factory.Settings["OpenApi:Enabled"] = "true";
         using var client = _factory.CreateClient();
@@ -49,6 +49,13 @@ public sealed class OpenApiTests : IAsyncLifetime
             Assert.True(item.GetProperty("post").TryGetProperty("security", out _), $"POST {path} declares no security");
             Assert.True(item.GetProperty("post").GetProperty("responses").TryGetProperty("401", out _), $"POST {path} has no 401");
             Assert.False(item.GetProperty("get").TryGetProperty("security", out _), $"GET {path} declares security");
+            var post = item.GetProperty("post");
+            Assert.True(post.GetProperty("responses").TryGetProperty("409", out _), $"POST {path} has no 409");
+            Assert.True(post.GetProperty("responses").TryGetProperty("422", out _), $"POST {path} has no 422");
+            var header = Assert.Single(post.GetProperty("parameters").EnumerateArray(),
+                p => string.Equals(p.GetProperty("name").GetString(), "Idempotency-Key", StringComparison.Ordinal));
+            Assert.Equal("header", header.GetProperty("in").GetString());
+            Assert.Equal(100, header.GetProperty("schema").GetProperty("maxLength").GetInt32());
         }
     }
 

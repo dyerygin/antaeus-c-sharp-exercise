@@ -1,6 +1,7 @@
 using CSharpApp.Api;
 using CSharpApp.Api.Endpoints;
 using CSharpApp.Api.Health;
+using CSharpApp.Api.Idempotency;
 using CSharpApp.Api.Middleware;
 using CSharpApp.Api.RateLimiting;
 using CSharpApp.Api.Security;
@@ -31,6 +32,7 @@ try
     builder.Services.AddApi(builder.Configuration);
     builder.Services.AddApiRateLimiting(builder.Configuration);
     builder.Services.AddApiKeyAuthentication(builder.Configuration);
+    builder.Services.AddIdempotency(builder.Configuration);
     builder.Services.AddApiVersioning(options => options.ApiVersionReader = new UrlSegmentApiVersionReader());
 
     var app = builder.Build();

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CSharpApp.Api.Contracts;
+using CSharpApp.Api.Idempotency;
 using CSharpApp.Api.RateLimiting;
 using CSharpApp.Api.Security;
 using CSharpApp.Application.Products;
@@ -34,6 +35,7 @@ public static class ProductsEndpoints
             products.MapPost("", CreateProductAsync)
                 .WithName("CreateProduct")
                 .RequireAuthorization(ApiKeyAuthentication.WritePolicy)
+                .WithIdempotency<CreateProductRequest>()
                 .ProducesProblems(
                     StatusCodes.Status400BadRequest,
                     StatusCodes.Status401Unauthorized,

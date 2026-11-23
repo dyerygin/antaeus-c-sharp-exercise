@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using CSharpApp.Api.ErrorHandling;
 using CSharpApp.Api.Health;
+using CSharpApp.Api.Idempotency;
 using CSharpApp.Api.Security;
 using CSharpApp.Infrastructure.HealthChecks;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -36,7 +37,8 @@ public static class DependencyInjection
                 return Task.CompletedTask;
             })
             .AddDocumentTransformer(ApiKeyOpenApi.AddSecuritySchemeAsync)
-            .AddOperationTransformer(ApiKeyOpenApi.RequireOnAuthorizedOperationsAsync));
+            .AddOperationTransformer(ApiKeyOpenApi.RequireOnAuthorizedOperationsAsync)
+            .AddOperationTransformer(IdempotencyOpenApi.AddKeyHeaderAsync));
             services.AddOptions<PagingSettings>()
                 .Bind(configuration.GetSection(PagingSettings.SectionName))
                 .ValidateDataAnnotations()
