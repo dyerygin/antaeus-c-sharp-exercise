@@ -155,6 +155,9 @@ references only.
   pinned images; a `docker` job that builds both images, starts the stack and runs newman; Conventional Commits on
   pull requests.
 - **Dependabot** for NuGet, Docker base images and GitHub Actions.
+- **GitHub repository settings:** a ruleset on `main` (changes only through a pull request, the four CI jobs above
+  must pass, no force pushes or deletion, merge or rebase but no squash); CodeQL code scanning (default setup, C#);
+  secret scanning with push protection (no alerts on the history as of 2026-11-23); Dependabot alerts.
 - **Independent reviews:** three interim reviews and a final review of the whole diff, each by a fresh reviewer
   without the implementer's reasoning; the final review added a second model and a security review. Each finding was
   fixed with a test, rejected with evidence, or deferred here.
