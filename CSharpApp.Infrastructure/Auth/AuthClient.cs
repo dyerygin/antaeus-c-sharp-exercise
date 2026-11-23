@@ -2,7 +2,7 @@ using CSharpApp.Infrastructure.Clients;
 
 namespace CSharpApp.Infrastructure.Auth;
 
-/// <summary>Typed client for <c>auth/login</c> and <c>auth/refresh-token</c>: no bearer, no retry, its own timeout (ADR-0014, R32).</summary>
+/// <summary>Typed client for <c>auth/login</c> and <c>auth/refresh-token</c>: no bearer, no retry, its own timeout (ADR-0014).</summary>
 public sealed class AuthClient(HttpClient httpClient, IOptions<RestApiSettings> settings, IOptions<HttpClientSettings> http) : IAuthClient
 {
     private TimeSpan Deadline => TimeSpan.FromSeconds(http.Value.AuthTimeoutSeconds);

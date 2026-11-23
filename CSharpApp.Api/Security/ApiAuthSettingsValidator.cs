@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 
 namespace CSharpApp.Api.Security;
 
-/// <summary>R8, T9: checks every key on start; messages name the setting, never the key.</summary>
+/// <summary>Checks every key on start (DataAnnotations do not look inside list items); messages name the setting, never the key.</summary>
 internal sealed class ApiAuthSettingsValidator : IValidateOptions<ApiAuthSettings>
 {
     internal const int MinKeyLength = 32;

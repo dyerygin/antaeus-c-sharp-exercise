@@ -8,7 +8,7 @@ using WireMock.ResponseBuilders;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>Idempotent creates with <c>Idempotency-Key</c> (ADR-0013, review focus 3, T1).</summary>
+/// <summary>Idempotent creates with <c>Idempotency-Key</c> (ADR-0013).</summary>
 public sealed class IdempotencyTests : IAsyncDisposable
 {
     private const string KeyHeader = "Idempotency-Key";
@@ -137,7 +137,7 @@ public sealed class IdempotencyTests : IAsyncDisposable
     [Fact]
     public async Task Create_ConcurrentSameKey_OneSucceedsOneReturns409()
     {
-        // R31: the upstream create is held open until the second request has been answered, so the two truly overlap.
+        // The upstream create is held open until the second request has been answered, so the two truly overlap.
         using var gate = new ManualResetEventSlim();
         var arrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _factory.Upstream.Given(Request.Create().WithPath("/api/v1/categories").UsingPost())
@@ -209,7 +209,7 @@ public sealed class IdempotencyTests : IAsyncDisposable
     [Fact]
     public async Task Create_ClientAbortsAfterUpstreamSuccess_RetryReplays()
     {
-        // T1: the client gives up while the read-back is held open; the create happened, so the result is still stored.
+        // The client gives up while the read-back is held open; the create happened, so the result is still stored.
         StubProductCreate(42);
         using var gate = new ManualResetEventSlim();
         var arrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -247,7 +247,7 @@ public sealed class IdempotencyTests : IAsyncDisposable
     public async Task Create_ClientAbortsDuringUpstreamCreate_RetryReplays()
     {
         // The case retries exist for: the client times out while the upstream create is still running. The create
-        // must finish and be stored, so the retry replays it instead of creating a duplicate (final review I-1).
+        // must finish and be stored, so the retry replays it instead of creating a duplicate.
         using var gate = new ManualResetEventSlim();
         var arrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _factory.Upstream.Given(Request.Create().WithPath("/api/v1/categories").UsingPost())

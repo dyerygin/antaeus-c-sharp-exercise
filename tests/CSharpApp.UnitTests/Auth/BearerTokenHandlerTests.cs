@@ -7,7 +7,7 @@ using NSubstitute;
 
 namespace CSharpApp.UnitTests.Auth;
 
-/// <summary>Bearer token on every upstream call and one resend after a 401 (ADR-0014, R15, §6 item 5).</summary>
+/// <summary>Bearer token on every upstream call and one resend after a 401 (ADR-0014).</summary>
 public sealed class BearerTokenHandlerTests
 {
     private static readonly Uri ProductsUri = new("http://upstream.test/api/v1/products");

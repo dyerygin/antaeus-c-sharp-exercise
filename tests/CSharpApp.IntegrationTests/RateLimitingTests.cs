@@ -4,7 +4,7 @@ using WireMock.ResponseBuilders;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>Fixed-window rate limit on /api by client_id, else remote IP; forwarded headers only from known proxies (ADR-0016, R42, Q4).</summary>
+/// <summary>Fixed-window rate limit on /api by client_id, else remote IP; forwarded headers only from known proxies (ADR-0016).</summary>
 public sealed class RateLimitingTests : IAsyncLifetime
 {
     private readonly ApiFactory _factory = new()
@@ -47,7 +47,7 @@ public sealed class RateLimitingTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
         Assert.Equal("application/problem+json", third.Content.Headers.ContentType?.MediaType);
         Assert.True(third.Headers.RetryAfter?.Delta > TimeSpan.Zero);
-        // R21: the rejection still passes through the security headers.
+        // The rejection still passes through the security headers.
         Assert.Equal("nosniff", Assert.Single(third.Headers.GetValues("X-Content-Type-Options")));
         Assert.Equal(2, _factory.Upstream.ResourceEntries.Count);
     }
@@ -67,7 +67,7 @@ public sealed class RateLimitingTests : IAsyncLifetime
     [Fact]
     public async Task ForwardedFor_FromUnknownProxy_Ignored()
     {
-        // Q4: with no known proxies, a client cannot pick a new partition by sending its own X-Forwarded-For.
+        // With no known proxies, a client cannot pick a new partition by sending its own X-Forwarded-For.
         using var client = _factory.CreateClient();
 
         (await GetCategoriesAsync(client, "203.0.113.1")).Dispose();
@@ -95,7 +95,7 @@ public sealed class RateLimitingTests : IAsyncLifetime
     [Fact]
     public async Task ApiKeyClient_PartitionedByClientId_NotIp()
     {
-        // R42 (ADR-0012, ADR-0016): an authenticated client keeps one budget whatever IP it comes from.
+        // ADR-0012, ADR-0016: an authenticated client keeps one budget whatever IP it comes from.
         _factory.Settings["ForwardedHeaders:KnownProxies:0"] = "10.0.0.1";
         using var client = _factory.CreateClient();
 

@@ -20,12 +20,12 @@ public static class DependencyInjection
         /// <summary>Adds the mediator, validation, OpenAPI, ProblemDetails, the exception handler, the JSON contract and the Kestrel hardening.</summary>
         public IServiceCollection AddApi(IConfiguration configuration)
         {
-            // The source generator lives in this project and discovers the handlers in CSharpApp.Application (L47).
+            // The source generator lives in this project and discovers the handlers in CSharpApp.Application.
             services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
             services.AddValidation();
             services.AddOpenApi(options => options.AddDocumentTransformer((document, context, _) =>
             {
-                // R13: Asp.Versioning.Http without its API explorer leaves the route's {version} in the paths;
+                // Asp.Versioning.Http without its API explorer leaves the route's {version} in the paths;
                 // the document is per version, so its paths are concrete (/api/v1/products).
                 var paths = new OpenApiPaths();
                 foreach (var (path, item) in document.Paths)
@@ -53,8 +53,8 @@ public static class DependencyInjection
             services.AddProblemDetails(options => options.CustomizeProblemDetails = CamelCaseValidationErrors.Apply);
             services.AddExceptionHandler<ApiExceptionHandler>();
 
-            // T5: one JSON contract. Web defaults give camelCase; nulls are omitted and numbers are never strings.
-            // X1: inbound bodies get the JsonSerializerOptions.Strict rules (duplicate or unknown members, null in a
+            // One JSON contract (ADR-0006). Web defaults give camelCase; nulls are omitted and numbers are never strings.
+            // Inbound bodies get the JsonSerializerOptions.Strict rules (duplicate or unknown members, null in a
             // non-nullable member → 400). The upstream clients keep their own lenient options (ADR-0006).
             services.ConfigureHttpJsonOptions(options =>
             {
@@ -73,7 +73,7 @@ public static class DependencyInjection
                 .ValidateOnStart();
             services.AddOptions<KestrelServerOptions>().Configure<IOptions<ApiLimitsSettings>>((kestrel, limits) =>
             {
-                // R12: no "Server: Kestrel" banner. A3: oversized bodies get 413 (ADR-0006).
+                // No "Server: Kestrel" banner; oversized bodies get 413 (ADR-0006).
                 kestrel.AddServerHeader = false;
                 kestrel.Limits.MaxRequestBodySize = limits.Value.MaxRequestBodyBytes;
             });

@@ -10,7 +10,7 @@ using Serilog.Events;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>API key on write endpoints only (ADR-0012, ASM-07, review focus 6).</summary>
+/// <summary>API key on write endpoints only (ADR-0012, ASM-07).</summary>
 public sealed class ApiKeyAuthTests : IAsyncDisposable
 {
     private static readonly object CreateBody = new

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CSharpApp.Api.Endpoints;
 
-/// <summary>OpenAPI response metadata with a description per status (X2); each endpoint lists only what it can return.</summary>
+/// <summary>OpenAPI response metadata with a description per status; each endpoint lists only what it can return.</summary>
 internal static class EndpointResponses
 {
     private static readonly Dictionary<int, string> Descriptions = new()

@@ -10,7 +10,7 @@ using NSubstitute;
 
 namespace CSharpApp.UnitTests.HealthChecks;
 
-/// <summary>Readiness: an authenticated upstream probe, cached (ADR-0016, R4, A10, ASM-12).</summary>
+/// <summary>Readiness: an authenticated upstream probe, cached (ADR-0016, ASM-12).</summary>
 public sealed class UpstreamHealthCheckTests
 {
     private readonly FakeTimeProvider _time = new();

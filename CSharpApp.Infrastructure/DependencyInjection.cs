@@ -29,7 +29,7 @@ public static class DependencyInjection
             AddUpstreamPipeline(services.AddHttpClient<IProductsClient, ProductsClient>(ConfigureUpstream), "products");
             AddUpstreamPipeline(services.AddHttpClient<ICategoriesClient, CategoriesClient>(ConfigureUpstream), "categories");
 
-            // ADR-0014: login and refresh get no bearer and no retry; AuthClient has its own timeout (R32).
+            // ADR-0014: login and refresh get no bearer and no retry; AuthClient has its own timeout.
             var auth = services.AddHttpClient<IAuthClient, AuthClient>(ConfigureUpstream);
             AddTiming(auth, "auth");
             UseUpstreamPrimaryHandler(auth);
@@ -38,7 +38,7 @@ public static class DependencyInjection
             services.AddSingleton<IAccessTokenProvider>(provider => provider.GetRequiredService<AccessTokenProvider>());
             services.AddTransient<BearerTokenHandler>();
 
-            // ADR-0016, R4: the readiness probe authenticates like every resource call; no retry, its own timeout.
+            // ADR-0016: the readiness probe authenticates like every resource call; no retry, its own timeout.
             var health = services.AddHttpClient(UpstreamHealthCheck.ClientName, ConfigureUpstream);
             AddTiming(health, "health");
             UseUpstreamPrimaryHandler(health);
@@ -51,7 +51,7 @@ public static class DependencyInjection
     /// <summary>The shared outbound pipeline of every upstream client (ADR-0004).</summary>
     private static void AddUpstreamPipeline(IHttpClientBuilder builder, string client)
     {
-        // ADR-0015, R38: the first handler added is the outermost, so the time covers retries and the 401 resend.
+        // ADR-0015: the first handler added is the outermost, so the time covers retries and the 401 resend.
         AddTiming(builder, client);
         UseUpstreamPrimaryHandler(builder);
 
@@ -82,7 +82,7 @@ public static class DependencyInjection
             provider.GetRequiredService<TimeProvider>(),
             provider.GetRequiredService<IOptions<HttpClientSettings>>()));
 
-    /// <summary>A4: never follow redirects to another host; recycle pooled connections so DNS changes are seen.</summary>
+    /// <summary>ADR-0004: never follow redirects to another host; recycle pooled connections so DNS changes are seen.</summary>
     private static void UseUpstreamPrimaryHandler(IHttpClientBuilder builder) =>
         builder.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {

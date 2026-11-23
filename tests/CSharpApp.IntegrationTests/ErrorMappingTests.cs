@@ -47,7 +47,7 @@ public sealed class ErrorMappingTests : IAsyncLifetime
     [Fact]
     public async Task Upstream_ConnectionRefused_Returns502()
     {
-        // Review A M-4: a closed well-known port, not a stopped WireMock port that a parallel test could take over.
+        // A closed well-known port, not a stopped WireMock port that a parallel test could take over.
         _factory.Settings["RestApiSettings:BaseUrl"] = "http://127.0.0.1:1/api/v1/";
         using var client = _factory.CreateClient();
 

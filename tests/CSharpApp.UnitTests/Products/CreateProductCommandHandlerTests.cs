@@ -83,7 +83,7 @@ public sealed class CreateProductCommandHandlerTests
     [Fact]
     public async Task ReadBack_UsesOwnTimeout_NotRequestToken()
     {
-        // W11/R29: the caller goes away right after the upstream create; the read-back still runs to completion.
+        // The caller goes away right after the upstream create; the read-back still runs to completion.
         using var request = new CancellationTokenSource();
         _products.CreateAsync(Arg.Any<NewProduct>(), Arg.Any<CancellationToken>()).Returns(_ =>
         {

@@ -1,6 +1,6 @@
 namespace CSharpApp.Api.Middleware;
 
-/// <summary>Adds browser-hardening headers to every response, and <c>Cache-Control: no-store</c> to errors (A5, ADR-0006).</summary>
+/// <summary>Adds browser-hardening headers to every response, and <c>Cache-Control: no-store</c> to errors (ADR-0006).</summary>
 /// <remarks>
 /// Headers are set in <c>OnStarting</c>, not before <c>next</c>: the exception handler clears the response before it
 /// writes a ProblemDetails, which would drop headers set earlier.

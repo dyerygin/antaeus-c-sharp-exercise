@@ -7,7 +7,7 @@ using Serilog.Events;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>T8: the request log line carries method, path, status and time only: no query string, headers, body or client IP.</summary>
+/// <summary>The request log line carries method, path, status and time only: no query string, headers, body or client IP.</summary>
 public sealed class RequestLoggingTests
 {
     [Fact]

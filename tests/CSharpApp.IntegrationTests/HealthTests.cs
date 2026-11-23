@@ -5,7 +5,7 @@ using WireMock.ResponseBuilders;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>Liveness and authenticated readiness through the whole pipeline (ADR-0016, R4, R39, ASM-12).</summary>
+/// <summary>Liveness and authenticated readiness through the whole pipeline (ADR-0016, ASM-12).</summary>
 public sealed class HealthTests : IAsyncLifetime
 {
     private readonly ApiFactory _factory = new() { Settings = { ["HttpClientSettings:HealthCheckCacheSeconds"] = "0" } };
@@ -32,7 +32,7 @@ public sealed class HealthTests : IAsyncLifetime
     [Fact]
     public async Task HealthReady_TokenRequiringUpstream_Returns200()
     {
-        // R4/R39: the upstream answers 401 without a token, so only an authenticated probe is ready.
+        // The upstream answers 401 without a token, so only an authenticated probe is ready.
         _factory.Upstream.Given(Request.Create().WithPath("/api/v1/categories").UsingGet()
                 .WithHeader("Authorization", $"Bearer {_factory.UpstreamToken}"))
             .AtPriority(1)
@@ -53,7 +53,7 @@ public sealed class HealthTests : IAsyncLifetime
     [Fact]
     public async Task HealthReady_WithinCacheWindow_ProbesUpstreamOnce()
     {
-        // A10 through DI: the readiness check must be the one cached instance, not a new check per request (review C I1).
+        // Through DI: the readiness check must be the one cached instance, not a new check per request.
         await using var factory = new ApiFactory { Settings = { ["HttpClientSettings:HealthCheckCacheSeconds"] = "60" } };
         factory.Upstream.StubRaw("GET", "categories", 200, "[]");
         using var client = factory.CreateClient();

@@ -11,7 +11,7 @@ using NSubstitute.ExceptionExtensions;
 
 namespace CSharpApp.UnitTests.Auth;
 
-/// <summary>Token cache, refresh-then-login and single-flight login (ADR-0014, R31, R32, R41, §6 item 1).</summary>
+/// <summary>Token cache, refresh-then-login and single-flight login (ADR-0014).</summary>
 public sealed class AccessTokenProviderTests
 {
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 11, 23, 10, 0, 0, TimeSpan.Zero));
@@ -85,7 +85,7 @@ public sealed class AccessTokenProviderTests
     [Fact]
     public async Task GetTokenAsync_ConcurrentCallers_LoginOnce()
     {
-        // R31: the login is held open until every caller is waiting, so the 20 calls truly overlap.
+        // The login is held open until every caller is waiting, so the 20 calls truly overlap.
         var release = new TaskCompletionSource<AuthTokens>(TaskCreationOptions.RunContinuationsAsynchronously);
         _auth.LoginAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(release.Task);
         var provider = CreateProvider();
@@ -136,7 +136,7 @@ public sealed class AccessTokenProviderTests
     [Fact]
     public async Task OneMinuteToken_LoginOnceThenReuse()
     {
-        // R41: the skew is min(60 s, 10 % of the lifetime), so a 1-minute token is not expired on arrival.
+        // The skew is min(60 s, 10 % of the lifetime), so a 1-minute token is not expired on arrival.
         _auth.LoginAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Tokens("a", TimeSpan.FromMinutes(1)));
         var provider = CreateProvider();
 
@@ -167,7 +167,7 @@ public sealed class AccessTokenProviderTests
     [Fact]
     public async Task Login_Hangs_TimesOutAndReleasesLock()
     {
-        // R32: the AuthClient's own timeout ends the login; the lock is released, so the next caller can log in.
+        // The AuthClient's own timeout ends the login; the lock is released, so the next caller can log in.
         _auth.LoginAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(
             _ => Task.FromException<AuthTokens>(new UpstreamTimeoutException("login timed out")),
             _ => Task.FromResult(Tokens("a", TimeSpan.FromDays(20))));
@@ -184,7 +184,7 @@ public sealed class AccessTokenProviderTests
     [Fact]
     public async Task CallerCancelledDuringLogin_LoginStillCachesToken()
     {
-        // Review B I2: the login must not run on the first caller's token. That token carries the caller's attempt
+        // The login must not run on the first caller's token. That token carries the caller's attempt
         // timeout (shorter than AuthTimeoutSeconds) and its client abort; either would cancel the login for everyone.
         var release = new TaskCompletionSource<AuthTokens>(TaskCreationOptions.RunContinuationsAsynchronously);
         _auth.LoginAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())

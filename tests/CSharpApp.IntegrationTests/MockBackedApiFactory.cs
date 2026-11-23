@@ -11,7 +11,7 @@ using MockProgram = mock::Program;
 namespace CSharpApp.IntegrationTests;
 
 /// <summary>
-/// The API wired to the in-process contract mock (A8, ADR-0003): real login, bearer tokens required on resources,
+/// The API wired to the in-process contract mock (ADR-0003): real login, bearer tokens required on resources,
 /// the mock's validation and quirks. No socket is opened: the upstream host name does not resolve.
 /// </summary>
 public sealed class MockBackedApiFactory : WebApplicationFactory<Program>
@@ -34,7 +34,7 @@ public sealed class MockBackedApiFactory : WebApplicationFactory<Program>
                 ["RateLimiting:PermitLimit"] = "100000",
             }));
 
-        // R10: registered after the app's own client setup, so this primary handler wins over the per-client one.
+        // Registered after the app's own client setup, so this primary handler wins over the per-client one.
         builder.ConfigureTestServices(services => services.ConfigureAll<HttpClientFactoryOptions>(options =>
             options.HttpMessageHandlerBuilderActions.Add(handlers => handlers.PrimaryHandler = Mock.Server.CreateHandler())));
     }

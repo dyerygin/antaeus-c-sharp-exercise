@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace CSharpApp.UnitTests.Security;
 
-/// <summary>R8, T9: API keys are validated on start, item by item, with an actionable message.</summary>
+/// <summary>API keys are validated on start, item by item, with an actionable message.</summary>
 public sealed class ApiAuthSettingsValidationTests
 {
     private static ApiAuthSettings Resolve(Dictionary<string, string?> settings)

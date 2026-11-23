@@ -4,9 +4,9 @@ namespace CSharpApp.Infrastructure.HealthChecks;
 
 /// <summary>Readiness of the upstream: an authenticated <c>GET categories?limit=1</c>, cached (ADR-0016, ASM-12).</summary>
 /// <remarks>
-/// The named client carries the bearer handler (R4), so readiness also proves the login works and holds against an
+/// The named client carries the bearer handler (ADR-0016), so readiness also proves the login works and holds against an
 /// upstream that requires a token on every resource. No retry; its own timeout. A singleton, so the result is reused for
-/// <c>HealthCheckCacheSeconds</c> (A10) and a busy orchestrator cannot multiply upstream calls. Failure details stay
+/// <c>HealthCheckCacheSeconds</c> and a busy orchestrator cannot multiply upstream calls. Failure details stay
 /// out of the result: the health endpoint is public.
 /// </remarks>
 public sealed class UpstreamHealthCheck(

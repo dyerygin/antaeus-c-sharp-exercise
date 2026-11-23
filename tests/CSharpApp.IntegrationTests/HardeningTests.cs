@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>Security headers, no server banner and one JSON contract on every response (ADR-0006, A5, T5).</summary>
+/// <summary>Security headers, no server banner and one JSON contract on every response (ADR-0006).</summary>
 public sealed class HardeningTests : IAsyncLifetime
 {
     private readonly ApiFactory _factory = new();
@@ -47,7 +47,7 @@ public sealed class HardeningTests : IAsyncLifetime
     [Fact]
     public async Task Response_HasNoServerHeader()
     {
-        // TestServer never sends Server; only a real Kestrel listener shows whether the banner is off (R12).
+        // TestServer never sends Server; only a real Kestrel listener shows whether the banner is off.
         _factory.UseKestrel(0);
         _factory.StartServer();
         using var client = _factory.CreateClient();

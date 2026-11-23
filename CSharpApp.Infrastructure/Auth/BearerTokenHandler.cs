@@ -16,7 +16,7 @@ public sealed class BearerTokenHandler(IAccessTokenProvider tokens) : Delegating
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        // Buffered before the first send, so the resend carries exactly the same bytes (R15).
+        // Buffered before the first send, so the resend carries exactly the same bytes (ADR-0014).
         var body = request.Content is null ? null : await request.Content.ReadAsByteArrayAsync(cancellationToken);
 
         var token = await tokens.GetTokenAsync(cancellationToken);

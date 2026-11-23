@@ -99,7 +99,7 @@ public sealed class ResiliencePipelineTests : IDisposable
     [InlineData(nameof(ICategoriesClient))]
     public void ClientTimeout_IsInfinite(string clientName)
     {
-        // Review A M-1: HttpClient.Timeout (100 s by default) must not cut a call before the configured total timeout;
+        // HttpClient.Timeout (100 s by default) must not cut a call before the configured total timeout;
         // the standard resilience handler sets it to infinite, so only the configured timeouts apply.
         using var client = _services.GetRequiredService<IHttpClientFactory>().CreateClient(clientName);
 
@@ -109,7 +109,7 @@ public sealed class ResiliencePipelineTests : IDisposable
     [Fact]
     public void AccessTokenProvider_IsOneSingleton()
     {
-        // §6 item 1 depends on every caller sharing one cache and one login gate.
+        // The single login depends on every caller sharing one cache and one login gate.
         Assert.Same(_services.GetRequiredService<IAccessTokenProvider>(), _services.GetRequiredService<IAccessTokenProvider>());
     }
 
@@ -153,7 +153,7 @@ public sealed class ResiliencePipelineTests : IDisposable
     [Fact]
     public async Task Create_Upstream401Twice_ResentOnceThenUnavailable()
     {
-        // R15: one resend after 401 even for POST (rejected before processing); the second 401 → 502, no loop.
+        // ADR-0014: one resend after 401 even for POST (rejected before processing); the second 401 → 502, no loop.
         _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(401));
         var client = _services.GetRequiredService<IProductsClient>();
@@ -200,7 +200,7 @@ public sealed class ResiliencePipelineTests : IDisposable
     [InlineData("IAuthClient")]
     public void UpstreamClients_HaveTimingHandlerOutermost(string clientName)
     {
-        // ADR-0015, R38: outermost, so the logged time covers retries, the token and the 401 resend.
+        // ADR-0015: outermost, so the logged time covers retries, the token and the 401 resend.
         var chain = new List<Type>();
         HttpMessageHandler handler = _services.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(clientName);
         while (handler is DelegatingHandler delegating)

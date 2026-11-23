@@ -7,7 +7,7 @@ namespace CSharpApp.IntegrationTests;
 
 /// <summary>
 /// Unreadable, ambiguous or oversized bodies are rejected before validation and before any upstream call, with the same
-/// status in Development (ThrowOnBadRequest) and Production (R3, R23, R43, ADR-0006).
+/// status in Development (ThrowOnBadRequest) and Production (ADR-0006).
 /// </summary>
 public sealed class RequestBodyTests : IAsyncLifetime
 {
@@ -78,7 +78,7 @@ public sealed class RequestBodyTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Empty(_factory.Upstream.LogEntries);
-        // Review B I1: rejected by the strict JSON reader (X1); [Required] on Title would also give 400, but with errors.title.
+        // Rejected by the strict JSON reader (ADR-0006); [Required] on Title would also give 400, but with errors.title.
         using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
         Assert.False(problem.RootElement.TryGetProperty("errors", out _));
     }
@@ -95,7 +95,7 @@ public sealed class RequestBodyTests : IAsyncLifetime
     [Fact]
     public async Task BodyTooLarge_Returns413()
     {
-        // TestServer does not enforce Kestrel's MaxRequestBodySize, so this runs on a real Kestrel listener (R3).
+        // TestServer does not enforce Kestrel's MaxRequestBodySize, so this runs on a real Kestrel listener.
         _factory.UseKestrel(0);
         _factory.StartServer();
         using var client = _factory.CreateClient();

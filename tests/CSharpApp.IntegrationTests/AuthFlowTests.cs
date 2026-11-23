@@ -63,7 +63,7 @@ public sealed class AuthFlowTests : IAsyncLifetime
     [Fact]
     public async Task ConcurrentRequests_SingleLogin()
     {
-        // §6 item 1 end to end: the login is slow, so 20 first requests overlap while it runs.
+        // End to end: the login is slow, so 20 first requests overlap while it runs.
         _factory.Upstream.ResetMappings();
         _factory.Upstream.Given(Request.Create().WithPath("/api/v1/auth/login").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(201).WithHeader("Content-Type", "application/json")

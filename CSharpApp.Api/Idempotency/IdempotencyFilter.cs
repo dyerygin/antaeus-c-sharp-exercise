@@ -6,13 +6,13 @@ using Microsoft.Extensions.Options;
 
 namespace CSharpApp.Api.Idempotency;
 
-/// <summary>Makes a create endpoint idempotent per <c>Idempotency-Key</c> (ADR-0013, review focus 3).</summary>
+/// <summary>Makes a create endpoint idempotent per <c>Idempotency-Key</c> (ADR-0013).</summary>
 /// <typeparam name="TRequest">The endpoint's body type; its bound value is what the key is tied to.</typeparam>
 /// <remarks>
 /// Without the header nothing changes. With it: a new key runs the endpoint and stores a 2xx response; the same key and
 /// body replays it without running the endpoint; another body gets 422; a key still running gets 409. Errors are not
 /// stored, so the client can retry. The response is stored with <see cref="CancellationToken.None"/>, so a client that
-/// disconnects after the upstream create still finds it on retry (T1).
+/// disconnects after the upstream create still finds it on retry.
 /// </remarks>
 public sealed class IdempotencyFilter<TRequest>(IIdempotencyStore store, IOptions<JsonOptions> json) : IEndpointFilter
     where TRequest : class
@@ -72,7 +72,7 @@ public sealed class IdempotencyFilter<TRequest>(IIdempotencyStore store, IOption
                 return null;
             }
 
-            // Run the result into a buffer: what is stored is exactly what the client gets. T1: the JSON writer skips
+            // Run the result into a buffer: what is stored is exactly what the client gets. The JSON writer skips
             // the body once the client has gone, so the buffered run does not see the client's abort.
             var original = (http.Response.Body, http.RequestAborted);
             using var buffer = new MemoryStream();

@@ -19,7 +19,7 @@ public sealed class HealthProbeTests : IAsyncDisposable
     [Fact]
     public async Task HealthProbe_ReturnsExitCode()
     {
-        // The probe opens a socket, so the API runs on Kestrel, not TestServer (R9, R47).
+        // The probe opens a socket, so the API runs on Kestrel, not TestServer (ADR-0017).
         _factory.UseKestrel(0);
         _factory.StartServer();
         using var client = _factory.CreateClient();
@@ -32,7 +32,7 @@ public sealed class HealthProbeTests : IAsyncDisposable
     [Fact]
     public async Task HealthProbe_NothingListening_Returns1()
     {
-        // Port 1 is closed on CI and developer machines: connection refused at once (L85).
+        // Port 1 is closed on CI and developer machines: connection refused at once.
         var exitCode = await HealthProbe.RunAsync(1, Timeout, Ct);
 
         Assert.Equal(1, exitCode);

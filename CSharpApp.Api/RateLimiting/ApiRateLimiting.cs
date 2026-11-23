@@ -25,7 +25,7 @@ public static class ApiRateLimiting
 
             services.AddOptions<ForwardedHeadersOptions>().Configure(options =>
             {
-                // Q4: trust X-Forwarded-For only from configured proxies, so a client cannot pick its own rate-limit
+                // Trust X-Forwarded-For only from configured proxies, so a client cannot pick its own rate-limit
                 // partition. The loopback defaults are dropped too. With both lists empty the middleware would trust
                 // every sender, so no configured proxy means no forwarded headers at all.
                 options.KnownProxies.Clear();
@@ -61,7 +61,7 @@ public static class ApiRateLimiting
         }
     }
 
-    /// <summary>R42: <c>client_id</c> once API keys exist (ADR-0012), else the remote IP, else one shared partition.</summary>
+    /// <summary><c>client_id</c> of an API-key caller (ADR-0012), else the remote IP, else one shared partition.</summary>
     private static string PartitionKey(HttpContext context) =>
         context.User.FindFirst("client_id")?.Value
         ?? context.Connection.RemoteIpAddress?.ToString()

@@ -184,7 +184,7 @@ public sealed class ProductsClientTests
     [Fact]
     public async Task GetById_BodyStallsBeyondTimeout_ThrowsUpstreamTimeout()
     {
-        // Headers arrive, the body never does: the read must still end at the configured total timeout (review A I-1).
+        // Headers arrive, the body never does: the read must still end at the configured total timeout.
         var handler = BodyFrom(new StallingStream());
         using var guard = CancellationTokenSource.CreateLinkedTokenSource(Ct);
         guard.CancelAfter(TimeSpan.FromSeconds(5));

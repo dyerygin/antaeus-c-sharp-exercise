@@ -26,7 +26,7 @@ public sealed partial record CreateProductCommand(string Title, decimal Price, s
             }
 
             // ADR-0011, ASM-05: the upstream echoes a fractional price but stores a whole number; return what is stored.
-            // R29: the create has happened, so the read-back runs on its own timeout, not the caller's token.
+            // The create has happened, so the read-back runs on its own timeout, not the caller's token.
             using var readBack = new CancellationTokenSource(TimeSpan.FromSeconds(http.Value.TotalTimeoutSeconds));
             try
             {

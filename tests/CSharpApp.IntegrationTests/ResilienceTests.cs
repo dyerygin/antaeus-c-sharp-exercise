@@ -4,7 +4,7 @@ using WireMock.ResponseBuilders;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>Resilience through the whole API pipeline: retries for GET only, no redirects (ADR-0004, R40).</summary>
+/// <summary>Resilience through the whole API pipeline: retries for GET only, no redirects (ADR-0004).</summary>
 public sealed class ResilienceTests : IAsyncLifetime
 {
     private readonly ApiFactory _factory = new();
@@ -31,7 +31,7 @@ public sealed class ResilienceTests : IAsyncLifetime
     [Fact]
     public async Task Upstream302_NotFollowed_Returns502()
     {
-        // R40: a redirect could send the bearer token to another host; it is never followed.
+        // A redirect could send the bearer token to another host; it is never followed.
         _factory.Upstream.Given(Request.Create().WithPath("/api/v1/products").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(302).WithHeader("Location", $"{_factory.Upstream.Url}/elsewhere"));
         _factory.Upstream.Given(Request.Create().WithPath("/elsewhere").UsingGet())

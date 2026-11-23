@@ -6,7 +6,7 @@ using Microsoft.Extensions.Time.Testing;
 
 namespace CSharpApp.UnitTests.Api;
 
-/// <summary>Feature #4: one inbound timing line per request, outside the error mapping (ADR-0015, R21).</summary>
+/// <summary>Feature #4: one inbound timing line per request, outside the error mapping (ADR-0015).</summary>
 public sealed class RequestTimingMiddlewareTests
 {
     private readonly FakeTimeProvider _time = new();

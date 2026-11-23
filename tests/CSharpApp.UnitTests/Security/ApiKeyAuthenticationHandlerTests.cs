@@ -57,7 +57,7 @@ public sealed class ApiKeyAuthenticationHandlerTests
         Assert.Equal(ApiKeyAuthenticationOptions.Scheme, result.Ticket.AuthenticationScheme);
     }
 
-    // R44: a constant-time comparison cannot be timed in a unit test; these pin what it returns.
+    // A constant-time comparison cannot be timed in a unit test; these pin what it returns.
     [Theory]
     [InlineData("abcdefghijklmnopqrstuvwxyz012345", "abcdefghijklmnopqrstuvwxyz012345", true)]
     [InlineData("abcdefghijklmnopqrstuvwxyz012345", "abcdefghijklmnopqrstuvwxyz0123456", false)]

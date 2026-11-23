@@ -37,14 +37,14 @@ try
 
     var app = builder.Build();
 
-    // R21 order. Q4: the client IP from X-Forwarded-For only when a known proxy sent it (ADR-0016).
+    // Pipeline order (ADR-0016). The client IP from X-Forwarded-For only when a known proxy sent it (ADR-0016).
     app.UseForwardedHeaders();
 
-    // Feature #4, R21: right after forwarded headers, so the inbound time covers error mapping and everything after
-    // it (ADR-0015). T8: method, path, status and time only; no query string, headers, body or client IP.
+    // Feature #4: right after forwarded headers, so the inbound time covers error mapping and everything after
+    // it (ADR-0015). Method, path, status and time only; no query string, headers, body or client IP.
     app.UseMiddleware<RequestTimingMiddleware>();
 
-    // R21 order: errors become ProblemDetails (ADR-0005); bare 4xx/5xx without a body get one as well.
+    // Errors become ProblemDetails (ADR-0005); bare 4xx/5xx without a body get one as well.
     app.UseExceptionHandler();
     app.UseStatusCodePages();
     app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -61,7 +61,7 @@ try
     app.UseRateLimiter();
     app.UseAuthorization();
 
-    // A1: the OpenAPI document (JSON and YAML) only where configured: Development and the Docker demo.
+    // The OpenAPI document (JSON and YAML) only where configured: Development and the Docker demo.
     if (app.Configuration.GetValue<bool>("OpenApi:Enabled"))
     {
         app.MapOpenApi();

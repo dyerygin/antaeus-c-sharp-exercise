@@ -21,7 +21,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     /// <summary>The access token the upstream login stub hands out (ADR-0014); every resource call carries it.</summary>
     public string UpstreamToken { get; }
 
-    /// <summary>The connection's remote IP; TestServer leaves it null, so rate-limit tests set it (R42).</summary>
+    /// <summary>The connection's remote IP; TestServer leaves it null, so rate-limit tests set it.</summary>
     public IPAddress? RemoteIp { get; set; }
 
     /// <summary>The inbound API key header (ADR-0012).</summary>
@@ -60,7 +60,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         }
     }
 
-    /// <summary>W22: POST tests written before API keys existed keep working: every client sends the test key.</summary>
+    /// <summary>POST tests written before API keys existed keep working: every client sends the test key.</summary>
     protected override void ConfigureClient(HttpClient client)
     {
         base.ConfigureClient(client);

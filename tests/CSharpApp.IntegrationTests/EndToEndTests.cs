@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>The whole chain against the contract mock: API key, upstream JWT, mock validation and quirks (A8).</summary>
+/// <summary>The whole chain against the contract mock: API key, upstream JWT, mock validation and quirks (ADR-0003).</summary>
 public sealed class EndToEndTests : IAsyncDisposable
 {
     private readonly MockBackedApiFactory _factory = new();

@@ -11,7 +11,7 @@ public sealed partial class AccessTokenProvider(IAuthClient auth, IOptions<RestA
     // Without a readable exp the token is reused this long; the upstream's tokens normally last 20 days (ASM-04).
     private static readonly TimeSpan UnknownLifetime = TimeSpan.FromMinutes(5);
 
-    // R41: renew min(60 s, 10 % of the lifetime) early, so short-lived tokens are not expired on arrival.
+    // ADR-0014: renew min(60 s, 10 % of the lifetime) early, so short-lived tokens are not expired on arrival.
     private static readonly TimeSpan MaxSkew = TimeSpan.FromSeconds(60);
 
     private readonly Lock _sync = new();
@@ -34,9 +34,9 @@ public sealed partial class AccessTokenProvider(IAuthClient auth, IOptions<RestA
                 return renewed;
             }
 
-            // Review B I2: one shared renewal that runs on no caller's token. A caller's token carries its attempt
+            // One shared renewal that runs on no caller's token. A caller's token carries its attempt
             // timeout and its client abort, which would cancel the login for every waiter; AuthClient bounds the
-            // call with its own timeout (R32). A finished (also a failed) renewal is replaced, so the next caller retries.
+            // call with its own timeout. A finished (also a failed) renewal is replaced, so the next caller retries.
             if (_renewal is null || _renewal.IsCompleted)
             {
                 _renewal = RenewAsync(_current);

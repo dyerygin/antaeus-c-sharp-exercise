@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>A1: the OpenAPI document is served only when <c>OpenApi:Enabled</c> is set, with concrete versioned paths (R13).</summary>
+/// <summary>The OpenAPI document is served only when <c>OpenApi:Enabled</c> is set, with concrete versioned paths.</summary>
 public sealed class OpenApiTests : IAsyncLifetime
 {
     private readonly ApiFactory _factory = new();

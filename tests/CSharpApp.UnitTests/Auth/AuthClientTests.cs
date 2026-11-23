@@ -63,7 +63,7 @@ public sealed class AuthClientTests
     [Fact]
     public async Task Login_Hangs_ThrowsUpstreamTimeout()
     {
-        // R32: the auth call has its own timeout, so a hanging login cannot hold the token lock forever.
+        // The auth call has its own timeout, so a hanging login cannot hold the token lock forever.
         var handler = new StubHttpMessageHandler(async (_, token) =>
         {
             await Task.Delay(Timeout.Infinite, token);
