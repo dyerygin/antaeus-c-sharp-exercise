@@ -3,6 +3,7 @@ using CSharpApp.Api.ErrorHandling;
 using CSharpApp.Api.Health;
 using CSharpApp.Api.Idempotency;
 using CSharpApp.Api.Security;
+using CSharpApp.Api.Validation;
 using CSharpApp.Infrastructure.HealthChecks;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -49,7 +50,7 @@ public static class DependencyInjection
                 .AddCheck("self", () => HealthCheckResult.Healthy(), tags: [HealthEndpoints.Live])
                 .AddCheck<UpstreamHealthCheck>("upstream");
 
-            services.AddProblemDetails();
+            services.AddProblemDetails(options => options.CustomizeProblemDetails = CamelCaseValidationErrors.Apply);
             services.AddExceptionHandler<ApiExceptionHandler>();
 
             // T5: one JSON contract. Web defaults give camelCase; nulls are omitted and numbers are never strings.

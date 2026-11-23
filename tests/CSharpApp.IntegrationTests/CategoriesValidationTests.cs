@@ -20,7 +20,8 @@ public sealed class CategoriesValidationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
         var errors = problem.RootElement.GetProperty("errors");
-        Assert.True(errors.EnumerateObject().Any(e => string.Equals(e.Name, field, StringComparison.OrdinalIgnoreCase)), errors.GetRawText());
+        // Exact names: the error keys are the camelCase JSON names of the wire contract (ADR-0008).
+        Assert.True(errors.TryGetProperty(field, out _), errors.GetRawText());
         Assert.Empty(_factory.Upstream.LogEntries);
     }
 
