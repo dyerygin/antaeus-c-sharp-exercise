@@ -1,6 +1,7 @@
 using CSharpApp.Infrastructure.Auth;
 using CSharpApp.Infrastructure.Clients;
 using CSharpApp.Infrastructure.Diagnostics;
+using CSharpApp.Infrastructure.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 
@@ -36,6 +37,13 @@ public static class DependencyInjection
             services.AddSingleton<AccessTokenProvider>();
             services.AddSingleton<IAccessTokenProvider>(provider => provider.GetRequiredService<AccessTokenProvider>());
             services.AddTransient<BearerTokenHandler>();
+
+            // ADR-0016, R4: the readiness probe authenticates like every resource call; no retry, its own timeout.
+            var health = services.AddHttpClient(UpstreamHealthCheck.ClientName, ConfigureUpstream);
+            AddTiming(health, "health");
+            UseUpstreamPrimaryHandler(health);
+            health.AddHttpMessageHandler<BearerTokenHandler>();
+            services.TryAddSingleton<UpstreamHealthCheck>();
             return services;
         }
     }

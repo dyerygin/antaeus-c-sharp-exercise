@@ -1,12 +1,15 @@
 using System.Text.Json.Serialization;
 using CSharpApp.Api.ErrorHandling;
+using CSharpApp.Api.Health;
+using CSharpApp.Infrastructure.HealthChecks;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 
 namespace CSharpApp.Api;
 
-/// <summary>Registers the API layer: mediator (ADR-0007), validation (ADR-0008), OpenAPI, error mapping (ADR-0005) and request hardening (ADR-0006).</summary>
+/// <summary>Registers the API layer: mediator (ADR-0007), validation (ADR-0008), OpenAPI, error mapping (ADR-0005), request hardening (ADR-0006) and health checks (ADR-0016).</summary>
 public static class DependencyInjection
 {
     extension(IServiceCollection services)
@@ -34,6 +37,11 @@ public static class DependencyInjection
                 .Bind(configuration.GetSection(PagingSettings.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+
+            // ADR-0016, ASM-12: liveness runs "self" only; readiness adds the cached, authenticated upstream probe.
+            services.AddHealthChecks()
+                .AddCheck("self", () => HealthCheckResult.Healthy(), tags: [HealthEndpoints.Live])
+                .AddCheck<UpstreamHealthCheck>("upstream");
 
             services.AddProblemDetails();
             services.AddExceptionHandler<ApiExceptionHandler>();

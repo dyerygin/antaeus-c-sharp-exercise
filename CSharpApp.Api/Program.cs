@@ -1,5 +1,6 @@
 using CSharpApp.Api;
 using CSharpApp.Api.Endpoints;
+using CSharpApp.Api.Health;
 using CSharpApp.Api.Middleware;
 
 // F-13: a bootstrap logger reports start-up failures (for example invalid settings) before configuration is read.
@@ -22,8 +23,8 @@ try
 
     var app = builder.Build();
 
-    // Feature #4, R21: first, so the inbound time covers error mapping and everything after it (ADR-0015). T8: method,
-    // path, status and time only; no query string, headers, body or client IP.
+    // Feature #4, R21: first, so the inbound time covers error mapping and everything after
+    // it (ADR-0015). T8: method, path, status and time only; no query string, headers, body or client IP.
     app.UseMiddleware<RequestTimingMiddleware>();
 
     // R21 order: errors become ProblemDetails (ADR-0005); bare 4xx/5xx without a body get one as well.
@@ -45,6 +46,7 @@ try
 
     app.MapProductsEndpoints();
     app.MapCategoriesEndpoints();
+    app.MapHealthEndpoints();
 
     await app.RunAsync();
 }
