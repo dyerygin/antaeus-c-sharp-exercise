@@ -15,6 +15,9 @@ It references none of the application projects.
 - the original backend source (`PlatziLabs/fake-api-backend`, commit `12bbc93`);
 - behaviour measured by running that backend locally (status codes, error bodies, token lifetimes, price storage).
 
+Parity checked on 2026-11-23 against that backend at `12bbc93`, run locally: 18 upstream requests with the same status
+codes and shapes; `auth/profile` there also returns `password`, `creationAt` and `updatedAt`, which the mock omits.
+
 ## Endpoints
 
 All routes are under `/api/v1`, except the health endpoint.

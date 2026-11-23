@@ -233,9 +233,10 @@ Re-checked on 2026-11-23:
   create, no refresh tokens, a different data shape); details in [docs/CODE-ASSESSMENT.md](docs/CODE-ASSESSMENT.md).
 - The exercise owners were informed and agreed, on 2026-11-20, to a lightweight local mock of the original contract.
 
-**All verification was done against the mock and WireMock.** The contract itself was measured during analysis against
-the original backend, built locally from its public source (ASM-01, ASM-04, ASM-05, ASM-06, ASM-10). Nothing was
-verified against the public service.
+**The automated checks run against the mock and WireMock.** The contract itself was measured during analysis against
+the original backend, built locally from its public source (ASM-01, ASM-04, ASM-05, ASM-06, ASM-10), and one parity
+run against it is recorded under [Contract sources](#contract-sources). Nothing was verified against the public
+service.
 
 ### Why both the original backend and our own mock
 
@@ -253,6 +254,11 @@ with a token. The mock is small, licence-clean and deterministic.
 - the task README and the supplied Postman/Insomnia collections;
 - the original backend source at commit `12bbc93`;
 - behaviour measured by running that backend locally.
+
+Parity checked on 2026-11-23 against the original backend at `12bbc93`, run locally: 18 upstream requests (plus the
+stored-price check) with the same status codes and shapes; the API passed the newman collection against it (13 requests,
+56 assertions); accepted differences: `auth/profile` there also returns `password`, `creationAt` and `updatedAt`, which
+the API does not use.
 
 What the mock covers, its settings and its limits:
 [mocks/CSharpApp.UpstreamMock/README.md](mocks/CSharpApp.UpstreamMock/README.md).
@@ -484,7 +490,8 @@ The implementation was AI-assisted under the author's direction and review.
 - OAuth2/JWT for clients instead of API keys; a CORS policy; secrets in a key vault; an audit log.
 - A load test (for example k6) to put measured numbers behind the performance notes.
 - Property-based API tests (for example Schemathesis) against the OpenAPI document.
-- An automated parity check of the mock against the original backend, to detect contract drift.
+- A contract test against a real upstream in CI, to detect drift of the mock; not possible while the original backend
+  has no licence and no public instance (the parity check under "Contract sources" was run locally).
 - A local SonarQube run and mutation testing (Stryker.NET) to report a quality gate and a mutation score.
 - GET response caching; separate response models, decoupled from upstream DTOs.
 - OpenTelemetry export of traces and metrics.
