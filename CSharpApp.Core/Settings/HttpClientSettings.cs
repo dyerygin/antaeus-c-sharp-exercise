@@ -24,6 +24,10 @@ public sealed class HttpClientSettings : IValidatableObject
     [Range(1, 10_000)]
     public int RetryBaseDelayMs { get; init; } = 100;
 
+    /// <summary>Timeout of one upstream login or refresh call (R32), so a hanging login cannot hold the token lock.</summary>
+    [Range(1, 60)]
+    public int AuthTimeoutSeconds { get; init; } = 10;
+
     /// <summary>Timeout of the upstream readiness probe.</summary>
     [Range(1, 30)]
     public int HealthCheckTimeoutSeconds { get; init; } = 3;

@@ -102,9 +102,17 @@ public sealed class ResiliencePipelineTests : IDisposable
         Assert.Equal(Timeout.InfiniteTimeSpan, client.Timeout);
     }
 
+    [Fact]
+    public void AccessTokenProvider_IsOneSingleton()
+    {
+        // §6 item 1 depends on every caller sharing one cache and one login gate.
+        Assert.Same(_services.GetRequiredService<IAccessTokenProvider>(), _services.GetRequiredService<IAccessTokenProvider>());
+    }
+
     [Theory]
     [InlineData(nameof(IProductsClient))]
     [InlineData(nameof(ICategoriesClient))]
+    [InlineData("IAuthClient")]
     public void PrimaryHandler_IsSocketsHttpHandler_WithoutAutoRedirect(string clientName)
     {
         var factory = _services.GetRequiredService<IHttpMessageHandlerFactory>();
