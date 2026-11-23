@@ -75,14 +75,15 @@ public static class ProductsEndpoints
     /// <remarks>
     /// The upstream rounds prices down to whole numbers (ASM-05), so the response is read back after the create
     /// (ADR-0011). An unknown <c>categoryId</c> returns 400 on that field. A create is never retried (ADR-0004).
+    /// Once started, a create runs to its end even if the caller goes away (bounded by the upstream timeouts), so an
+    /// idempotent retry replays it instead of creating a duplicate (ADR-0013).
     /// </remarks>
     /// <param name="request">The new product.</param>
     /// <param name="sender">The mediator.</param>
-    /// <param name="ct">Aborted when the caller goes away.</param>
-    internal static async Task<CreatedAtRoute<Product>> CreateProductAsync(CreateProductRequest request, ISender sender, CancellationToken ct)
+    internal static async Task<CreatedAtRoute<Product>> CreateProductAsync(CreateProductRequest request, ISender sender)
     {
         var product = await sender.Send(
-            new CreateProductCommand(request.Title, request.Price, request.Description, request.CategoryId, request.Images), ct);
+            new CreateProductCommand(request.Title, request.Price, request.Description, request.CategoryId, request.Images), CancellationToken.None);
         return TypedResults.CreatedAtRoute(product, "GetProduct", new RouteValueDictionary { ["id"] = product.Id, ["version"] = "1" });
     }
 }

@@ -98,4 +98,18 @@ public sealed class InMemoryIdempotencyStoreTests
         Assert.Equal(IdempotencyOutcome.InProgress, (await store.TryBeginAsync("in-flight", "hash", Ct)).Outcome);
         Assert.Equal(IdempotencyOutcome.Started, (await store.TryBeginAsync("done", "hash", Ct)).Outcome);
     }
+
+    [Fact]
+    public async Task Full_AllInFlight_StillClaimsTheKey()
+    {
+        // Nothing can be evicted, yet the new key is claimed: a concurrent retry must see InProgress, not start again.
+        var store = Store(maxEntries: 1);
+        await store.TryBeginAsync("first", "hash", Ct);
+
+        var started = await store.TryBeginAsync("second", "hash", Ct);
+        var retry = await store.TryBeginAsync("second", "hash", Ct);
+
+        Assert.Equal(IdempotencyOutcome.Started, started.Outcome);
+        Assert.Equal(IdempotencyOutcome.InProgress, retry.Outcome);
+    }
 }

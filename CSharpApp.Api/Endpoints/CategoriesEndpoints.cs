@@ -70,13 +70,16 @@ public static class CategoriesEndpoints
         TypedResults.Ok(await sender.Send(new GetCategoryByIdQuery(id), ct));
 
     /// <summary>Creates a category.</summary>
-    /// <remarks>The upstream stores category fields as sent, so the create response is returned as is (ASM-11). Never retried (ADR-0004).</remarks>
+    /// <remarks>
+    /// The upstream stores category fields as sent, so the create response is returned as is (ASM-11). Never retried
+    /// (ADR-0004). Once started, a create runs to its end even if the caller goes away (bounded by the upstream
+    /// timeouts), so an idempotent retry replays it instead of creating a duplicate (ADR-0013).
+    /// </remarks>
     /// <param name="request">The new category.</param>
     /// <param name="sender">The mediator.</param>
-    /// <param name="ct">Aborted when the caller goes away.</param>
-    internal static async Task<CreatedAtRoute<Category>> CreateCategoryAsync(CreateCategoryRequest request, ISender sender, CancellationToken ct)
+    internal static async Task<CreatedAtRoute<Category>> CreateCategoryAsync(CreateCategoryRequest request, ISender sender)
     {
-        var category = await sender.Send(new CreateCategoryCommand(request.Name, request.Image), ct);
+        var category = await sender.Send(new CreateCategoryCommand(request.Name, request.Image), CancellationToken.None);
         return TypedResults.CreatedAtRoute(category, "GetCategory", new RouteValueDictionary { ["id"] = category.Id, ["version"] = "1" });
     }
 }

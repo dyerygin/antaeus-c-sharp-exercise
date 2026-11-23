@@ -243,6 +243,40 @@ public sealed class IdempotencyTests : IAsyncDisposable
         Assert.Equal(1, UpstreamCreates("products"));
     }
 
+    [Fact]
+    public async Task Create_ClientAbortsDuringUpstreamCreate_RetryReplays()
+    {
+        // The case retries exist for: the client times out while the upstream create is still running. The create
+        // must finish and be stored, so the retry replays it instead of creating a duplicate (final review I-1).
+        using var gate = new ManualResetEventSlim();
+        var arrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _factory.Upstream.Given(Request.Create().WithPath("/api/v1/categories").UsingPost())
+            .RespondWith(Response.Create().WithCallback(_ => GatedJson(arrived, gate, 201, new CategoryBuilder().WithId(7).Build())));
+        using var client = _factory.CreateClient();
+        using var abort = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+
+        var aborted = PostAsync(client, "categories", CategoryBody, "key-6", abort.Token);
+        await arrived.Task.WaitAsync(TimeSpan.FromSeconds(10), Ct);
+        await abort.CancelAsync();
+        gate.Set();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => aborted);
+
+        HttpResponseMessage retried;
+        do
+        {
+            retried = await PostAsync(client, "categories", CategoryBody, "key-6", Ct);
+        }
+        while (retried.StatusCode == HttpStatusCode.Conflict && await PauseAsync());
+
+        using (retried)
+        {
+            Assert.Equal(HttpStatusCode.Created, retried.StatusCode);
+            Assert.Equal("true", Assert.Single(retried.Headers.GetValues("Idempotent-Replayed")));
+        }
+
+        Assert.Equal(1, UpstreamCreates("categories"));
+    }
+
     private static async Task<bool> PauseAsync()
     {
         await Task.Delay(50, Ct);
