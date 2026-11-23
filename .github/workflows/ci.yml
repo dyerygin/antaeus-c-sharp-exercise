@@ -93,6 +93,30 @@ jobs:
       - name: gitleaks (working tree)
         run: docker run --rm -v "$PWD":/repo -w /repo zricethezav/gitleaks:v8.30.1 dir --redact --no-banner .
 
+  docker:
+    name: Docker images and compose stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Builds both images (nothing is pushed) and starts the stack; the health checks gate `--wait` (ADR-0017).
+      - name: Build images
+        run: |
+          cp .env.example .env
+          docker compose build
+
+      - name: Start the stack and wait until healthy
+        run: docker compose up -d --wait --wait-timeout 120
+
+      - name: Container logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down
+
   commit-messages:
     name: Conventional Commits
     if: github.event_name == 'pull_request'
