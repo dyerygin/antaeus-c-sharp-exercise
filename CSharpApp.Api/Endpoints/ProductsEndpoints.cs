@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CSharpApp.Api.Contracts;
+using CSharpApp.Api.RateLimiting;
 using CSharpApp.Application.Products;
 using CSharpApp.Core.Dtos;
 using Mediator;
@@ -18,7 +19,8 @@ public static class ProductsEndpoints
         {
             var products = app.NewVersionedApi("Products")
                 .MapGroup("api/v{version:apiVersion}/products")
-                .HasApiVersion(1.0);
+                .HasApiVersion(1.0)
+                .RequireRateLimiting(ApiRateLimiting.Policy);
 
             products.MapGet("", GetProductsAsync)
                 .WithName("GetProducts")

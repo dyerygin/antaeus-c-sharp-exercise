@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CSharpApp.Api.Contracts;
+using CSharpApp.Api.RateLimiting;
 using CSharpApp.Application.Categories;
 using CSharpApp.Core.Dtos;
 using Mediator;
@@ -18,7 +19,8 @@ public static class CategoriesEndpoints
         {
             var categories = app.NewVersionedApi("Categories")
                 .MapGroup("api/v{version:apiVersion}/categories")
-                .HasApiVersion(1.0);
+                .HasApiVersion(1.0)
+                .RequireRateLimiting(ApiRateLimiting.Policy);
 
             categories.MapGet("", GetCategoriesAsync)
                 .WithName("GetCategories")

@@ -2,6 +2,7 @@ using CSharpApp.Api;
 using CSharpApp.Api.Endpoints;
 using CSharpApp.Api.Health;
 using CSharpApp.Api.Middleware;
+using CSharpApp.Api.RateLimiting;
 
 // F-13: a bootstrap logger reports start-up failures (for example invalid settings) before configuration is read.
 // It is a plain logger, not Serilog's reloadable one: that one can be frozen once per process, which breaks a second
@@ -19,11 +20,15 @@ try
 
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddApi(builder.Configuration);
+    builder.Services.AddApiRateLimiting(builder.Configuration);
     builder.Services.AddApiVersioning(options => options.ApiVersionReader = new UrlSegmentApiVersionReader());
 
     var app = builder.Build();
 
-    // Feature #4, R21: first, so the inbound time covers error mapping and everything after
+    // R21 order. Q4: the client IP from X-Forwarded-For only when a known proxy sent it (ADR-0016).
+    app.UseForwardedHeaders();
+
+    // Feature #4, R21: right after forwarded headers, so the inbound time covers error mapping and everything after
     // it (ADR-0015). T8: method, path, status and time only; no query string, headers, body or client IP.
     app.UseMiddleware<RequestTimingMiddleware>();
 
@@ -36,6 +41,9 @@ try
         // ASM-09: TLS ends at a reverse proxy; HSTS is sent only on HTTPS requests, so it is inert on plain HTTP.
         app.UseHsts();
     }
+
+    // After the security headers, so a 429 carries them; after authentication once API keys exist (ADR-0012).
+    app.UseRateLimiter();
 
     // A1: the OpenAPI document (JSON and YAML) only where configured: Development and the Docker demo.
     if (app.Configuration.GetValue<bool>("OpenApi:Enabled"))
