@@ -1,7 +1,7 @@
 using CSharpApp.Api;
+using CSharpApp.Api.Endpoints;
 using CSharpApp.Api.Middleware;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Options;
 using Serilog.Events;
 
 // F-13: a bootstrap logger reports start-up failures (for example invalid settings) before configuration is read.
@@ -18,13 +18,8 @@ try
         .ReadFrom.Services(services),
         preserveStaticLogger: true);
 
-    builder.Services.AddOpenApi();
     builder.Services.AddInfrastructure(builder.Configuration);
-    builder.Services.AddOptions<PagingSettings>()
-        .BindConfiguration(PagingSettings.SectionName)
-        .ValidateDataAnnotations()
-        .ValidateOnStart();
-    builder.Services.AddApi();
+    builder.Services.AddApi(builder.Configuration);
     builder.Services.AddApiVersioning(options => options.ApiVersionReader = new UrlSegmentApiVersionReader());
 
     var app = builder.Build();
@@ -54,20 +49,14 @@ try
         app.UseHsts();
     }
 
-    if (app.Environment.IsDevelopment())
+    // A1: the OpenAPI document (JSON and YAML) only where configured: Development and the Docker demo.
+    if (app.Configuration.GetValue<bool>("OpenApi:Enabled"))
     {
         app.MapOpenApi();
+        app.MapOpenApi("/openapi/{documentName}.yaml");
     }
 
-    var versionedEndpointRouteBuilder = app.NewVersionedApi();
-
-    // The base commit's route, kept until the products endpoints replace it.
-    versionedEndpointRouteBuilder.MapGet(
-            "api/v{version:apiVersion}/getproducts",
-            (IProductsClient products, IOptions<PagingSettings> paging, CancellationToken ct) =>
-                products.GetAllAsync(0, paging.Value.DefaultLimit, ct))
-        .WithName("GetProducts")
-        .HasApiVersion(1.0);
+    app.MapProductsEndpoints();
 
     await app.RunAsync();
 }

@@ -22,7 +22,7 @@ public sealed class ErrorMappingTests : IAsyncLifetime
         _factory.Upstream.StubRaw("GET", "products", upstreamStatus, upstreamBody);
         using var client = _factory.CreateClient();
 
-        using var response = await client.GetAsync(new Uri("/api/v1/getproducts", UriKind.Relative), Ct);
+        using var response = await client.GetAsync(new Uri("/api/v1/products", UriKind.Relative), Ct);
 
         Assert.Equal(expected, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
@@ -38,7 +38,7 @@ public sealed class ErrorMappingTests : IAsyncLifetime
         _factory.Upstream.StubRaw("GET", "products", 200, "<html>not json</html>");
         using var client = _factory.CreateClient();
 
-        using var response = await client.GetAsync(new Uri("/api/v1/getproducts", UriKind.Relative), Ct);
+        using var response = await client.GetAsync(new Uri("/api/v1/products", UriKind.Relative), Ct);
 
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
         Assert.DoesNotContain("not json", await response.Content.ReadAsStringAsync(Ct), StringComparison.Ordinal);
@@ -50,7 +50,7 @@ public sealed class ErrorMappingTests : IAsyncLifetime
         _factory.Upstream.Stop();
         using var client = _factory.CreateClient();
 
-        using var response = await client.GetAsync(new Uri("/api/v1/getproducts", UriKind.Relative), Ct);
+        using var response = await client.GetAsync(new Uri("/api/v1/products", UriKind.Relative), Ct);
 
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
     }
@@ -63,7 +63,7 @@ public sealed class ErrorMappingTests : IAsyncLifetime
             .RespondWith(WireMock.ResponseBuilders.Response.Create().WithStatusCode(200).WithBody("[]").WithDelay(TimeSpan.FromSeconds(3)));
         using var client = _factory.CreateClient();
 
-        using var response = await client.GetAsync(new Uri("/api/v1/getproducts", UriKind.Relative), Ct);
+        using var response = await client.GetAsync(new Uri("/api/v1/products", UriKind.Relative), Ct);
 
         Assert.Equal(HttpStatusCode.GatewayTimeout, response.StatusCode);
     }

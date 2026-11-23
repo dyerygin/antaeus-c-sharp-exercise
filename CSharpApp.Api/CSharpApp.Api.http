@@ -1,7 +1,23 @@
+# Local requests against `dotnet run` (Development: upstream = the mock on localhost:5081).
 @HostAddress = http://localhost:5225
 @Version = v1
 
-GET {{HostAddress}}/api/{{Version}}/getproducts
+### List products (default page size 20)
+GET {{HostAddress}}/api/{{Version}}/products
 Accept: application/json
 
-###
+### One page
+GET {{HostAddress}}/api/{{Version}}/products?offset=0&limit=5
+Accept: application/json
+
+### One product
+GET {{HostAddress}}/api/{{Version}}/products/1
+Accept: application/json
+
+### Unknown product → 404 ProblemDetails
+GET {{HostAddress}}/api/{{Version}}/products/999999
+Accept: application/json
+
+### Invalid limit → 400 with errors.limit
+GET {{HostAddress}}/api/{{Version}}/products?limit=101
+Accept: application/json

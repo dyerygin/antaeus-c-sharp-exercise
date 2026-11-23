@@ -17,7 +17,7 @@ public sealed class HardeningTests : IAsyncLifetime
     [Theory]
     [InlineData("/openapi/v1.json", HttpStatusCode.OK)]
     [InlineData("/no-such-route", HttpStatusCode.NotFound)]
-    [InlineData("/api/v1/getproducts", HttpStatusCode.BadGateway)]
+    [InlineData("/api/v1/products", HttpStatusCode.BadGateway)]
     public async Task AnyResponse_HasSecurityHeaders(string path, HttpStatusCode expected)
     {
         _factory.Upstream.StubRaw("GET", "products", 503);
@@ -33,7 +33,7 @@ public sealed class HardeningTests : IAsyncLifetime
 
     [Theory]
     [InlineData("/no-such-route")]
-    [InlineData("/api/v1/getproducts")]
+    [InlineData("/api/v1/products")]
     public async Task ErrorResponse_IsNotCached(string path)
     {
         _factory.Upstream.StubRaw("GET", "products", 503);
@@ -64,7 +64,7 @@ public sealed class HardeningTests : IAsyncLifetime
         _factory.Upstream.StubRaw("GET", "products", 200, """[{"id":1,"title":"Lamp","price":10.5,"description":null,"images":[]}]""");
         using var client = _factory.CreateClient();
 
-        using var response = await client.GetAsync(new Uri("/api/v1/getproducts", UriKind.Relative), Ct);
+        using var response = await client.GetAsync(new Uri("/api/v1/products", UriKind.Relative), Ct);
 
         var product = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct)).RootElement[0];
         Assert.Equal("Lamp", product.GetProperty("title").GetString());

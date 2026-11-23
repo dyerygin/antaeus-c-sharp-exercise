@@ -1,17 +1,39 @@
 using System.Text.Json.Serialization;
 using CSharpApp.Api.ErrorHandling;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.OpenApi;
 
 namespace CSharpApp.Api;
 
-/// <summary>Registers the API layer: error mapping (ADR-0005) and request hardening (ADR-0006).</summary>
+/// <summary>Registers the API layer: mediator (ADR-0007), validation (ADR-0008), OpenAPI, error mapping (ADR-0005) and request hardening (ADR-0006).</summary>
 public static class DependencyInjection
 {
     extension(IServiceCollection services)
     {
-        /// <summary>Adds ProblemDetails, the exception handler, the JSON contract and the Kestrel hardening.</summary>
-        public IServiceCollection AddApi()
+        /// <summary>Adds the mediator, validation, OpenAPI, ProblemDetails, the exception handler, the JSON contract and the Kestrel hardening.</summary>
+        public IServiceCollection AddApi(IConfiguration configuration)
         {
+            // The source generator lives in this project and discovers the handlers in CSharpApp.Application (L47).
+            services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
+            services.AddValidation();
+            services.AddOpenApi(options => options.AddDocumentTransformer((document, context, _) =>
+            {
+                // R13: Asp.Versioning.Http without its API explorer leaves the route's {version} in the paths;
+                // the document is per version, so its paths are concrete (/api/v1/products).
+                var paths = new OpenApiPaths();
+                foreach (var (path, item) in document.Paths)
+                {
+                    paths[path.Replace("v{version}", context.DocumentName, StringComparison.Ordinal)] = item;
+                }
+
+                document.Paths = paths;
+                return Task.CompletedTask;
+            }));
+            services.AddOptions<PagingSettings>()
+                .Bind(configuration.GetSection(PagingSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
             services.AddProblemDetails();
             services.AddExceptionHandler<ApiExceptionHandler>();
 
