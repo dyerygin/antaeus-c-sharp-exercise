@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Standalone fake of the upstream contract: references none of the application projects (ADR-0003). -->
+  <ItemGroup>
+    <Content Remove="seed.json" />
+    <EmbeddedResource Include="seed.json" LogicalName="seed.json" />
+  </ItemGroup>
+
+</Project>
