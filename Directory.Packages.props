@@ -6,7 +6,7 @@
 
   <ItemGroup Label="Analyzers (every project)">
     <GlobalPackageReference Include="SonarAnalyzer.CSharp" Version="10.37.0.15768" />
-    <GlobalPackageReference Include="Meziantou.Analyzer" Version="3.0.341" />
+    <GlobalPackageReference Include="Meziantou.Analyzer" Version="3.0.342" />
   </ItemGroup>
 
   <ItemGroup Label="Application and infrastructure">
@@ -22,7 +22,7 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.15" />
-    <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageVersion Include="Serilog.AspNetCore" Version="11.0.0" />
   </ItemGroup>
 
   <ItemGroup Label="Tests">
