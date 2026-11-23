@@ -76,6 +76,32 @@ public sealed class ResiliencePipelineTests : IDisposable
         Assert.Equal(2, _upstream.LogEntries.Count);
     }
 
+    [Fact]
+    public async Task RepeatedCalls_Succeed()
+    {
+        // F-01 regression: the base code set BaseAddress on a shared HttpClient per call, so the second call failed.
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json").WithBody("[]"));
+        var client = _services.GetRequiredService<IProductsClient>();
+
+        await client.GetAllAsync(0, 20, Ct);
+        await _services.GetRequiredService<IProductsClient>().GetAllAsync(0, 20, Ct);
+
+        Assert.Equal(2, _upstream.LogEntries.Count);
+    }
+
+    [Theory]
+    [InlineData(nameof(IProductsClient))]
+    [InlineData(nameof(ICategoriesClient))]
+    public void ClientTimeout_IsInfinite(string clientName)
+    {
+        // Review A M-1: HttpClient.Timeout (100 s by default) must not cut a call before the configured total timeout;
+        // the standard resilience handler sets it to infinite, so only the configured timeouts apply.
+        using var client = _services.GetRequiredService<IHttpClientFactory>().CreateClient(clientName);
+
+        Assert.Equal(Timeout.InfiniteTimeSpan, client.Timeout);
+    }
+
     [Theory]
     [InlineData(nameof(IProductsClient))]
     [InlineData(nameof(ICategoriesClient))]
