@@ -8,6 +8,8 @@ using CSharpApp.TestData.Builders;
 using CSharpApp.UnitTests.TestDoubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 
 namespace CSharpApp.UnitTests.Clients;
 
@@ -199,6 +201,23 @@ public sealed class ProductsClientTests
         var error = await Assert.ThrowsAsync<UpstreamUnavailableException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
 
         Assert.IsAssignableFrom<IOException>(error.InnerException);
+    }
+
+    [Fact]
+    public async Task ResilienceTimeout_MapsToUpstreamTimeout()
+    {
+        // Callers (the create read-back, ADR-0011) handle UpstreamException only; Polly's types stay in Infrastructure.
+        var handler = new StubHttpMessageHandler((_, _) => throw new TimeoutRejectedException());
+
+        await Assert.ThrowsAsync<UpstreamTimeoutException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
+    }
+
+    [Fact]
+    public async Task OpenCircuit_MapsToUnavailable()
+    {
+        var handler = new StubHttpMessageHandler((_, _) => throw new BrokenCircuitException());
+
+        await Assert.ThrowsAsync<UpstreamUnavailableException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
     }
 
     /// <summary>A body whose bytes never come; only cancellation ends a read.</summary>

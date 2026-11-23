@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using CSharpApp.Api.ErrorHandling;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 
 namespace CSharpApp.Api;
@@ -51,8 +52,16 @@ public static class DependencyInjection
                 json.RespectRequiredConstructorParameters = true;
             });
 
-            // R12: no "Server: Kestrel" banner.
-            services.Configure<KestrelServerOptions>(options => options.AddServerHeader = false);
+            services.AddOptions<ApiLimitsSettings>()
+                .Bind(configuration.GetSection(ApiLimitsSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.AddOptions<KestrelServerOptions>().Configure<IOptions<ApiLimitsSettings>>((kestrel, limits) =>
+            {
+                // R12: no "Server: Kestrel" banner. A3: oversized bodies get 413 (ADR-0006).
+                kestrel.AddServerHeader = false;
+                kestrel.Limits.MaxRequestBodySize = limits.Value.MaxRequestBodyBytes;
+            });
             return services;
         }
     }

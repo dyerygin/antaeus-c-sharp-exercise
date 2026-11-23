@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CSharpApp.Api.Contracts;
 using CSharpApp.Application.Products;
 using CSharpApp.Core.Dtos;
 using Mediator;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace CSharpApp.Api.Endpoints;
 
-/// <summary>The products resource: list and get by id (ADR-0007, ADR-0010).</summary>
+/// <summary>The products resource: list, get by id and create (ADR-0007, ADR-0010, ADR-0011).</summary>
 public static class ProductsEndpoints
 {
     extension(IEndpointRouteBuilder app)
@@ -26,6 +27,16 @@ public static class ProductsEndpoints
             products.MapGet("{id:int}", GetProductAsync)
                 .WithName("GetProduct")
                 .ProducesProblems(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status429TooManyRequests, StatusCodes.Status502BadGateway, StatusCodes.Status504GatewayTimeout);
+
+            products.MapPost("", CreateProductAsync)
+                .WithName("CreateProduct")
+                .ProducesProblems(
+                    StatusCodes.Status400BadRequest,
+                    StatusCodes.Status413PayloadTooLarge,
+                    StatusCodes.Status415UnsupportedMediaType,
+                    StatusCodes.Status429TooManyRequests,
+                    StatusCodes.Status502BadGateway,
+                    StatusCodes.Status504GatewayTimeout);
 
             return app;
         }
@@ -52,4 +63,19 @@ public static class ProductsEndpoints
     /// <param name="ct">Aborted when the caller goes away.</param>
     internal static async Task<Ok<Product>> GetProductAsync([Range(1, int.MaxValue)] int id, ISender sender, CancellationToken ct) =>
         TypedResults.Ok(await sender.Send(new GetProductByIdQuery(id), ct));
+
+    /// <summary>Creates a product and returns it as the upstream stored it.</summary>
+    /// <remarks>
+    /// The upstream rounds prices down to whole numbers (ASM-05), so the response is read back after the create
+    /// (ADR-0011). An unknown <c>categoryId</c> returns 400 on that field. A create is never retried (ADR-0004).
+    /// </remarks>
+    /// <param name="request">The new product.</param>
+    /// <param name="sender">The mediator.</param>
+    /// <param name="ct">Aborted when the caller goes away.</param>
+    internal static async Task<CreatedAtRoute<Product>> CreateProductAsync(CreateProductRequest request, ISender sender, CancellationToken ct)
+    {
+        var product = await sender.Send(
+            new CreateProductCommand(request.Title, request.Price, request.Description, request.CategoryId, request.Images), ct);
+        return TypedResults.CreatedAtRoute(product, "GetProduct", new RouteValueDictionary { ["id"] = product.Id, ["version"] = "1" });
+    }
 }

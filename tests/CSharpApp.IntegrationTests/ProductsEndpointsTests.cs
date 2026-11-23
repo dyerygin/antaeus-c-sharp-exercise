@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using CSharpApp.TestData.Builders;
 
@@ -64,5 +65,55 @@ public sealed class ProductsEndpointsTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    private static readonly object CreateBody = new
+    {
+        title = "Lamp",
+        price = 10.5m,
+        description = "A lamp",
+        categoryId = 1,
+        images = new[] { "https://images.test/lamp.png" },
+    };
+
+    [Fact]
+    public async Task CreateProduct_Valid_Returns201WithLocation()
+    {
+        // ASM-05: the upstream echoes 10.5 but stores 10; the response shows what was stored (ADR-0011).
+        _factory.Upstream.StubJson("POST", "products", 201, new ProductBuilder().WithId(42).WithPrice(10.5m).Build());
+        _factory.Upstream.StubJson("GET", "products/42", 200, new ProductBuilder().WithId(42).WithPrice(10m).Build());
+        using var client = _factory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(new Uri("/api/v1/products", UriKind.Relative), CreateBody, Ct);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.EndsWith("/api/v1/products/42", response.Headers.Location?.ToString(), StringComparison.Ordinal);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+        Assert.Equal(10m, body.RootElement.GetProperty("price").GetDecimal());
+    }
+
+    [Fact]
+    public async Task CreateProduct_UnknownCategory_Returns400OnCategoryId()
+    {
+        _factory.Upstream.StubEntityNotFound("POST", "products");
+        using var client = _factory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(new Uri("/api/v1/products", UriKind.Relative), CreateBody, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+        Assert.True(problem.RootElement.GetProperty("errors").TryGetProperty("categoryId", out _));
+    }
+
+    [Fact]
+    public async Task CreateProduct_Upstream500_NotRetried_Returns502()
+    {
+        _factory.Upstream.StubRaw("POST", "products", 500);
+        using var client = _factory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(new Uri("/api/v1/products", UriKind.Relative), CreateBody, Ct);
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        Assert.Single(_factory.Upstream.LogEntries);
     }
 }

@@ -15,7 +15,8 @@ alone turns every missing product into 400. Errors must never echo upstream bodi
   `UpstreamBadRequestException` (upstream `message` kept for logs only); 401/403, 3xx, 5xx → `UpstreamUnavailableException`.
   Transport errors, including a reset mid-body → unavailable; a 2xx with an empty, `null` or malformed body →
   `UpstreamContractException`. Headers and the streamed body share one `TotalTimeoutSeconds` deadline →
-  `UpstreamTimeoutException`.
+  `UpstreamTimeoutException`; the resilience pipeline's own timeout and open circuit are translated to the same Core
+  types, so Application never sees Polly.
 - `ApiExceptionHandler` writes ProblemDetails with `traceId`: `RequestValidationException` → 400 ValidationProblem;
   `BadHttpRequestException` → its status; not found → 404; upstream bad request → 400; unavailable, contract error or
   broken circuit → 502; either timeout → 504; client abort → 499 without a body; anything else → 500 with a generic title.
@@ -27,6 +28,7 @@ alone turns every missing product into 400. Errors must never echo upstream bodi
 ## Consequences
 
 - An upstream 401/403 is our credential problem, so the caller sees 502. If ASM-10 is wrong, an unknown id returns 400.
+- Development throws `BadHttpRequestException` for unreadable bodies; the mapping gives the same status as Production.
 
 ## Links
 

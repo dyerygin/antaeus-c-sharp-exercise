@@ -21,3 +21,27 @@ Accept: application/json
 ### Invalid limit → 400 with errors.limit
 GET {{HostAddress}}/api/{{Version}}/products?limit=101
 Accept: application/json
+
+### Create a product → 201 with Location; the price is the stored (whole-number) value
+POST {{HostAddress}}/api/{{Version}}/products
+Content-Type: application/json
+
+{
+  "title": "Lamp",
+  "price": 10.5,
+  "description": "A desk lamp",
+  "categoryId": 1,
+  "images": ["https://placehold.co/600x400"]
+}
+
+### Unknown category → 400 with errors.categoryId
+POST {{HostAddress}}/api/{{Version}}/products
+Content-Type: application/json
+
+{
+  "title": "Lamp",
+  "price": 10,
+  "description": "A desk lamp",
+  "categoryId": 999999,
+  "images": ["https://placehold.co/600x400"]
+}

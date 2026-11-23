@@ -1,5 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 
 namespace CSharpApp.Infrastructure.Clients;
 
@@ -36,6 +38,15 @@ internal static class UpstreamHttpClientExtensions
         {
             // Our deadline, not the caller: 504. A caller's own cancellation propagates unchanged (499).
             throw new UpstreamTimeoutException("The upstream service did not answer in time.", ex);
+        }
+        catch (TimeoutRejectedException ex)
+        {
+            // The resilience pipeline's total or attempt timeout; callers see Core types only (ADR-0005).
+            throw new UpstreamTimeoutException("The upstream service did not answer in time.", ex);
+        }
+        catch (BrokenCircuitException ex)
+        {
+            throw new UpstreamUnavailableException("The upstream service is failing; the circuit is open.", ex);
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException)
         {
