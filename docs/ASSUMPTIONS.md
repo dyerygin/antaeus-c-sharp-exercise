@@ -1,6 +1,5 @@
 # Assumptions register
 
-
 Every assumption the solution relies on about the upstream, the environment or the requirements. Code and tests
 that rely on one cite its id in a comment (for example `// ASM-10: …`). Decisions are in [`adr/`](adr/); findings
 (F-xx) are in [`CODE-ASSESSMENT.md`](CODE-ASSESSMENT.md).

@@ -1,6 +1,5 @@
 # ADR-NNNN: Short decision title
 
-
 Status: Proposed | Accepted | Superseded by ADR-NNNN\
 Date: YYYY-MM-DD (the date of the commit that implements the decision)
 

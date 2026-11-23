@@ -1,6 +1,5 @@
 # ADR-0001: Keep the four layers; client interfaces in Core, implementations in Infrastructure
 
-
 Status: Accepted\
 Date: 2026-11-23
 
