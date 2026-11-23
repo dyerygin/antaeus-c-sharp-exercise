@@ -94,11 +94,15 @@ jobs:
         run: docker run --rm -v "$PWD":/repo -w /repo zricethezav/gitleaks:v8.30.1 dir --redact --no-banner .
 
   docker:
-    name: Docker images and compose stack
+    name: Docker images, compose stack, newman smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       # Builds both images (nothing is pushed) and starts the stack; the health checks gate `--wait` (ADR-0017).
       - name: Build images
@@ -108,6 +112,23 @@ jobs:
 
       - name: Start the stack and wait until healthy
         run: docker compose up -d --wait --wait-timeout 120
+
+      # Black-box smoke against the real images: health, validation, errors, API key, idempotency, headers.
+      - name: Newman smoke (Postman collection)
+        run: |
+          api_key=$(grep '^API_KEY=' .env | cut -d= -f2-)
+          npx --yes newman@6.2.3 run docs/postman/CSharpApp.postman_collection.json \
+            -e docs/postman/CSharpApp.local.postman_environment.json \
+            --env-var "apiKey=$api_key" \
+            --reporters cli,junit --reporter-junit-export artifacts/newman/junit.xml
+
+      - name: Upload newman report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman
+          path: artifacts/newman/
+          if-no-files-found: warn
 
       - name: Container logs
         if: failure()
