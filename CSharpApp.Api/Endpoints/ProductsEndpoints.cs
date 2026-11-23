@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using CSharpApp.Api.Contracts;
 using CSharpApp.Api.RateLimiting;
+using CSharpApp.Api.Security;
 using CSharpApp.Application.Products;
 using CSharpApp.Core.Dtos;
 using Mediator;
@@ -32,8 +33,10 @@ public static class ProductsEndpoints
 
             products.MapPost("", CreateProductAsync)
                 .WithName("CreateProduct")
+                .RequireAuthorization(ApiKeyAuthentication.WritePolicy)
                 .ProducesProblems(
                     StatusCodes.Status400BadRequest,
+                    StatusCodes.Status401Unauthorized,
                     StatusCodes.Status413PayloadTooLarge,
                     StatusCodes.Status415UnsupportedMediaType,
                     StatusCodes.Status429TooManyRequests,

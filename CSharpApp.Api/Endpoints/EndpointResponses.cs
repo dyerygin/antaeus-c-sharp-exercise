@@ -8,6 +8,7 @@ internal static class EndpointResponses
     private static readonly Dictionary<int, string> Descriptions = new()
     {
         [StatusCodes.Status400BadRequest] = "The request is invalid; `errors` names the fields.",
+        [StatusCodes.Status401Unauthorized] = "The X-Api-Key header is missing or not a valid key.",
         [StatusCodes.Status404NotFound] = "No resource has this id.",
         [StatusCodes.Status413PayloadTooLarge] = "The request body is larger than the configured limit.",
         [StatusCodes.Status415UnsupportedMediaType] = "The request body is not JSON.",

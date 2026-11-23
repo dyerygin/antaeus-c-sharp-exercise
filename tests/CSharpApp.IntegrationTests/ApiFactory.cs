@@ -24,6 +24,12 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     /// <summary>The connection's remote IP; TestServer leaves it null, so rate-limit tests set it (R42).</summary>
     public IPAddress? RemoteIp { get; set; }
 
+    /// <summary>The inbound API key header (ADR-0012).</summary>
+    public const string ApiKeyHeader = "X-Api-Key";
+
+    /// <summary>The API key every client from this factory sends by default; tests without a key remove the header.</summary>
+    public const string TestApiKey = "integration-test-api-key-0123456789"; // gitleaks:allow (test value, ADR-0012)
+
     public ApiFactory() => UpstreamToken = Upstream.StubLogin();
 
     /// <summary>Settings a test overrides on top of the defaults below, applied last.</summary>
@@ -44,12 +50,21 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
                 ["HttpClientSettings:TotalTimeoutSeconds"] = "10",
                 // Shared factories send many requests from one (null) IP; rate-limit tests set their own limit.
                 ["RateLimiting:PermitLimit"] = "100000",
+                ["ApiAuth:Keys:0:ClientId"] = "integration-tests",
+                ["ApiAuth:Keys:0:Key"] = TestApiKey,
             })
             .AddInMemoryCollection(Settings));
         if (RemoteIp is { } ip)
         {
             builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(new RemoteIpStartupFilter(ip)));
         }
+    }
+
+    /// <summary>W22: POST tests written before API keys existed keep working: every client sends the test key.</summary>
+    protected override void ConfigureClient(HttpClient client)
+    {
+        base.ConfigureClient(client);
+        client.DefaultRequestHeaders.Add(ApiKeyHeader, TestApiKey);
     }
 
     /// <summary>Sets the connection's remote IP ahead of the app's own pipeline (before forwarded headers).</summary>

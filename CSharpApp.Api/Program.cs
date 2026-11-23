@@ -3,6 +3,7 @@ using CSharpApp.Api.Endpoints;
 using CSharpApp.Api.Health;
 using CSharpApp.Api.Middleware;
 using CSharpApp.Api.RateLimiting;
+using CSharpApp.Api.Security;
 
 // ADR-0017: the container health check runs this process with --health-probe; it probes the running instance and exits.
 if (args.Contains(HealthProbe.Argument, StringComparer.Ordinal))
@@ -29,6 +30,7 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddApi(builder.Configuration);
     builder.Services.AddApiRateLimiting(builder.Configuration);
+    builder.Services.AddApiKeyAuthentication(builder.Configuration);
     builder.Services.AddApiVersioning(options => options.ApiVersionReader = new UrlSegmentApiVersionReader());
 
     var app = builder.Build();
@@ -50,8 +52,12 @@ try
         app.UseHsts();
     }
 
-    // After the security headers, so a 429 carries them; after authentication once API keys exist (ADR-0012).
+    // ADR-0012: the key identifies the client before the limiter, so the limit partitions by client_id (ADR-0016).
+    app.UseAuthentication();
+
+    // After the security headers, so a 429 carries them.
     app.UseRateLimiter();
+    app.UseAuthorization();
 
     // A1: the OpenAPI document (JSON and YAML) only where configured: Development and the Docker demo.
     if (app.Configuration.GetValue<bool>("OpenApi:Enabled"))

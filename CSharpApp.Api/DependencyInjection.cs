@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using CSharpApp.Api.ErrorHandling;
 using CSharpApp.Api.Health;
+using CSharpApp.Api.Security;
 using CSharpApp.Infrastructure.HealthChecks;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -31,8 +32,11 @@ public static class DependencyInjection
                 }
 
                 document.Paths = paths;
+
                 return Task.CompletedTask;
-            }));
+            })
+            .AddDocumentTransformer(ApiKeyOpenApi.AddSecuritySchemeAsync)
+            .AddOperationTransformer(ApiKeyOpenApi.RequireOnAuthorizedOperationsAsync));
             services.AddOptions<PagingSettings>()
                 .Bind(configuration.GetSection(PagingSettings.SectionName))
                 .ValidateDataAnnotations()

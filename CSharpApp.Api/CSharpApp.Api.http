@@ -1,6 +1,8 @@
 # Local requests against `dotnet run` (Development: upstream = the mock on localhost:5081).
 @HostAddress = http://localhost:5225
 @Version = v1
+# The local dev key from appsettings.Development.json (ADR-0012): not a secret.
+@ApiKey = local-dev-api-key-not-a-secret-0000
 
 ### List products (default page size 20)
 GET {{HostAddress}}/api/{{Version}}/products
@@ -25,6 +27,7 @@ Accept: application/json
 ### Create a product → 201 with Location; the price is the stored (whole-number) value
 POST {{HostAddress}}/api/{{Version}}/products
 Content-Type: application/json
+X-Api-Key: {{ApiKey}}
 
 {
   "title": "Lamp",
@@ -37,6 +40,7 @@ Content-Type: application/json
 ### Unknown category → 400 with errors.categoryId
 POST {{HostAddress}}/api/{{Version}}/products
 Content-Type: application/json
+X-Api-Key: {{ApiKey}}
 
 {
   "title": "Lamp",
@@ -57,8 +61,18 @@ Accept: application/json
 ### Create a category → 201 with Location (no read-back: stored as sent)
 POST {{HostAddress}}/api/{{Version}}/categories
 Content-Type: application/json
+X-Api-Key: {{ApiKey}}
 
 {
   "name": "Books",
+  "image": "https://placehold.co/600x400"
+}
+
+### Create without an API key → 401 ProblemDetails with WWW-Authenticate: ApiKey
+POST {{HostAddress}}/api/{{Version}}/categories
+Content-Type: application/json
+
+{
+  "name": "Lamps",
   "image": "https://placehold.co/600x400"
 }

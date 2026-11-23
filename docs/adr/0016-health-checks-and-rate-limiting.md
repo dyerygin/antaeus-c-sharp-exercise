@@ -15,11 +15,12 @@ which a client can forge. TLS ends at a reverse proxy (ASM-09).
 - `UpstreamHealthCheck` calls `GET categories?limit=1` through a named client (no retry, `HealthCheckTimeoutSeconds` 3)
   **with the bearer handler**: 2xx is Healthy, anything else Unhealthy, cached for `HealthCheckCacheSeconds` 10.
 - Fixed-window rate limit, `RateLimiting:PermitLimit` 100 per `WindowSeconds` 60, on `/api`; 429 ProblemDetails with
-  `Retry-After`; health is exempt. Partition key: remote IP (else `"anonymous"`); `client_id` once ADR-0012 is built.
+  `Retry-After`; health is exempt. Partition key: `client_id` of an API-key caller (ADR-0012), else the remote IP,
+  else `"anonymous"`.
 - `UseForwardedHeaders` trusts only `ForwardedHeaders:KnownProxies`; with none configured it forwards nothing, because
   ASP.NET Core trusts every sender when both known lists are empty.
-- Pipeline: forwarded headers, request timing, exception handler, status-code pages, security headers, HSTS, rate
-  limiter, endpoints (a 429 carries the security headers and a timing line).
+- Pipeline: forwarded headers, request timing, exception handler, status-code pages, security headers, HSTS,
+  authentication, rate limiter, authorization, endpoints (a 429 carries the security headers and a timing line).
 
 ## Alternatives considered
 

@@ -4,7 +4,7 @@ using WireMock.ResponseBuilders;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>Fixed-window rate limit on /api by remote IP; forwarded headers only from known proxies (ADR-0016, R42, Q4).</summary>
+/// <summary>Fixed-window rate limit on /api by client_id, else remote IP; forwarded headers only from known proxies (ADR-0016, R42, Q4).</summary>
 public sealed class RateLimitingTests : IAsyncLifetime
 {
     private readonly ApiFactory _factory = new()
@@ -82,11 +82,27 @@ public sealed class RateLimitingTests : IAsyncLifetime
     {
         _factory.Settings["ForwardedHeaders:KnownProxies:0"] = "10.0.0.1";
         using var client = _factory.CreateClient();
+        // Anonymous callers are partitioned by IP; a key would partition by client_id instead.
+        client.DefaultRequestHeaders.Remove(ApiFactory.ApiKeyHeader);
 
         (await GetCategoriesAsync(client, "203.0.113.1")).Dispose();
         (await GetCategoriesAsync(client, "203.0.113.1")).Dispose();
         using var third = await GetCategoriesAsync(client, "203.0.113.2");
 
         Assert.Equal(HttpStatusCode.OK, third.StatusCode);
+    }
+
+    [Fact]
+    public async Task ApiKeyClient_PartitionedByClientId_NotIp()
+    {
+        // R42 (ADR-0012, ADR-0016): an authenticated client keeps one budget whatever IP it comes from.
+        _factory.Settings["ForwardedHeaders:KnownProxies:0"] = "10.0.0.1";
+        using var client = _factory.CreateClient();
+
+        (await GetCategoriesAsync(client, "203.0.113.1")).Dispose();
+        (await GetCategoriesAsync(client, "203.0.113.1")).Dispose();
+        using var third = await GetCategoriesAsync(client, "203.0.113.2");
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
     }
 }

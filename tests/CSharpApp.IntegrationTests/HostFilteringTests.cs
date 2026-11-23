@@ -15,7 +15,9 @@ public sealed class HostFilteringTests
         await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Production")
             .UseSetting("RestApiSettings:Username", "test-user")
-            .UseSetting("RestApiSettings:Password", "test-password"));
+            .UseSetting("RestApiSettings:Password", "test-password")
+            .UseSetting("ApiAuth:Keys:0:ClientId", "tests")
+            .UseSetting("ApiAuth:Keys:0:Key", ApiFactory.TestApiKey));
         using var client = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("/no-such-route", UriKind.Relative));
         request.Headers.Host = host;
