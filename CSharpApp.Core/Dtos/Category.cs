@@ -1,5 +1,6 @@
 namespace CSharpApp.Core.Dtos;
 
+/// <summary>A product category as the upstream catalogue returns it; also used as the API response.</summary>
 public sealed class Category
 {
     [JsonPropertyName("id")]

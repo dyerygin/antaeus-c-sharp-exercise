@@ -1,5 +1,6 @@
 namespace CSharpApp.Core.Settings;
 
+/// <summary>Upstream API settings: base address, relative resource paths and credentials (section <c>RestApiSettings</c>).</summary>
 public sealed class RestApiSettings
 {
     public string? BaseUrl { get; set; }

@@ -1,5 +1,6 @@
 namespace CSharpApp.Core.Dtos;
 
+/// <summary>A product as the upstream catalogue returns it; also used as the API response.</summary>
 public sealed class Product
 {
     [JsonPropertyName("id")]
@@ -15,7 +16,7 @@ public sealed class Product
     public string? Description { get; set; }
 
     [JsonPropertyName("images")]
-    public List<string> Images { get; } = [];
+    public IReadOnlyList<string> Images { get; init; } = [];
 
     [JsonPropertyName("creationAt")]
     public DateTime? CreationAt { get; set; }

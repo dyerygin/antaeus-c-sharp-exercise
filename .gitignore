@@ -361,3 +361,13 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Local settings and secrets (Docker Compose reads it; the template stays tracked)
+.env
+!.env.example
+
+# Coverage and editor/OS files not covered above
+*.lcov
+.DS_Store
+.idea/
+.vscode/

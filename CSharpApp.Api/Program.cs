@@ -9,7 +9,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddDefaultConfiguration();
 builder.Services.AddHttpConfiguration();
 builder.Services.AddProblemDetails();
-builder.Services.AddApiVersioning();
+builder.Services.AddApiVersioning(options => options.ApiVersionReader = new UrlSegmentApiVersionReader());
 
 var app = builder.Build();
 
@@ -18,8 +18,6 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
-//app.UseHttpsRedirection();
 
 var versionedEndpointRouteBuilder = app.NewVersionedApi();
 
@@ -31,4 +29,4 @@ versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/getproducts", as
     .WithName("GetProducts")
     .HasApiVersion(1.0);
 
-app.Run();
+await app.RunAsync();

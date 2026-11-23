@@ -1,3 +1,7 @@
+// Base-commit service kept only until the typed upstream clients replace it (Removed in Task 5).
+// Its known defects (shared mutated HttpClient F-01, null dereference F-08, interpolated log template)
+// are fixed by that rewrite rather than patched here.
+#pragma warning disable CA1001, CA1848, CA1873, CA2254, CS8602, S2629
 namespace CSharpApp.Application.Products;
 
 public class ProductsService : IProductsService
@@ -28,3 +32,4 @@ public class ProductsService : IProductsService
         return res.AsReadOnly();
     }
 }
+#pragma warning restore CA1001, CA1848, CA1873, CA2254, CS8602, S2629
