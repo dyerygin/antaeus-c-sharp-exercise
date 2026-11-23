@@ -1,20 +1,17 @@
 namespace CSharpApp.Core.Dtos;
 
-/// <summary>A product category as the upstream catalogue returns it; also used as the API response.</summary>
-public sealed class Category
+/// <summary>A product category as the upstream catalogue returns it; also the API response (ADR-0009).</summary>
+public sealed record Category
 {
-    [JsonPropertyName("id")]
-    public int? Id { get; set; }
+    public int Id { get; init; }
 
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
+    public string? Name { get; init; }
 
-    [JsonPropertyName("image")]
-    public string? Image { get; set; }
+    public string? Slug { get; init; }
 
-    [JsonPropertyName("creationAt")]
-    public DateTime? CreationAt { get; set; }
+    public string? Image { get; init; }
 
-    [JsonPropertyName("updatedAt")]
-    public DateTime? UpdatedAt { get; set; }
+    public DateTimeOffset? CreationAt { get; init; }
+
+    public DateTimeOffset? UpdatedAt { get; init; }
 }

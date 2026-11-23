@@ -4,7 +4,7 @@ namespace CSharpApp.Core.Settings;
 
 /// <summary>Outbound HTTP settings: timeouts, retries and health-check timing (section <c>HttpClientSettings</c>).</summary>
 /// <remarks>Feed the standard resilience pipeline (ADR-0004); validated on start.</remarks>
-public sealed class HttpClientSettings
+public sealed class HttpClientSettings : IValidatableObject
 {
     public const string SectionName = "HttpClientSettings";
 
@@ -35,4 +35,15 @@ public sealed class HttpClientSettings
     /// <summary>Upstream calls slower than this are logged as warnings.</summary>
     [Range(1, 60_000)]
     public int SlowThresholdMs { get; init; } = 1000;
+
+    /// <summary>The resilience pipeline rejects an attempt timeout above the total timeout, so it is checked on start.</summary>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (AttemptTimeoutSeconds > TotalTimeoutSeconds)
+        {
+            yield return new ValidationResult(
+                "HttpClientSettings:AttemptTimeoutSeconds must not exceed TotalTimeoutSeconds.",
+                [nameof(AttemptTimeoutSeconds), nameof(TotalTimeoutSeconds)]);
+        }
+    }
 }

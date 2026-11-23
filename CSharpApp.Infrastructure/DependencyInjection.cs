@@ -1,13 +1,14 @@
-using CSharpApp.Application.Products;
+using CSharpApp.Infrastructure.Clients;
+using Microsoft.Extensions.Http.Resilience;
 
 namespace CSharpApp.Infrastructure;
 
-/// <summary>Registers the infrastructure layer: settings validated on start and upstream access.</summary>
+/// <summary>Registers the infrastructure layer: settings validated on start and the typed upstream clients.</summary>
 public static class DependencyInjection
 {
     extension(IServiceCollection services)
     {
-        /// <summary>Binds and validates the upstream settings (no <c>BuildServiceProvider</c>, F-11).</summary>
+        /// <summary>Binds and validates the upstream settings (no <c>BuildServiceProvider</c>, F-11) and adds the typed clients.</summary>
         public IServiceCollection AddInfrastructure(IConfiguration configuration)
         {
             services.AddOptions<RestApiSettings>()
@@ -19,8 +20,37 @@ public static class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-            services.AddSingleton<IProductsService, ProductsService>();
+            AddUpstreamPipeline(services.AddHttpClient<IProductsClient, ProductsClient>(ConfigureUpstream));
+            AddUpstreamPipeline(services.AddHttpClient<ICategoriesClient, CategoriesClient>(ConfigureUpstream));
             return services;
         }
     }
+
+    /// <summary>The shared outbound pipeline of every upstream client (ADR-0004).</summary>
+    private static void AddUpstreamPipeline(IHttpClientBuilder builder)
+    {
+        // A4: never follow redirects to another host; recycle pooled connections so DNS changes are seen.
+        builder.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+        });
+
+        builder.AddStandardResilienceHandler().Configure((options, provider) =>
+        {
+            var settings = provider.GetRequiredService<IOptions<HttpClientSettings>>().Value;
+            options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(settings.TotalTimeoutSeconds);
+            options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(settings.AttemptTimeoutSeconds);
+            options.Retry.MaxRetryAttempts = settings.RetryCount;
+            options.Retry.Delay = TimeSpan.FromMilliseconds(settings.RetryBaseDelayMs);
+            // ADR-0004: POST is not idempotent upstream; a retry could create the product twice.
+            options.Retry.DisableForUnsafeHttpMethods();
+            // The circuit breaker requires a sampling window of at least twice the attempt timeout.
+            options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(Math.Max(30, 2 * settings.AttemptTimeoutSeconds));
+        });
+
+    }
+
+    private static void ConfigureUpstream(IServiceProvider provider, HttpClient client) =>
+        client.BaseAddress = new Uri(provider.GetRequiredService<IOptions<RestApiSettings>>().Value.BaseUrl);
 }

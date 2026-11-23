@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 using Serilog.Events;
 
 // F-13: a bootstrap logger reports start-up failures (for example invalid settings) before configuration is read.
@@ -48,11 +49,11 @@ try
 
     var versionedEndpointRouteBuilder = app.NewVersionedApi();
 
-    versionedEndpointRouteBuilder.MapGet("api/v{version:apiVersion}/getproducts", async (IProductsService productsService) =>
-        {
-            var products = await productsService.GetProducts();
-            return products;
-        })
+    // The base commit's route, kept until the products endpoints replace it.
+    versionedEndpointRouteBuilder.MapGet(
+            "api/v{version:apiVersion}/getproducts",
+            (IProductsClient products, IOptions<PagingSettings> paging, CancellationToken ct) =>
+                products.GetAllAsync(0, paging.Value.DefaultLimit, ct))
         .WithName("GetProducts")
         .HasApiVersion(1.0);
 

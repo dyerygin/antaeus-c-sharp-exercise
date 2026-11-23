@@ -4,12 +4,12 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CSharpApp.Application\CSharpApp.Application.csproj" />
     <ProjectReference Include="..\CSharpApp.Core\CSharpApp.Core.csproj" />
   </ItemGroup>
 

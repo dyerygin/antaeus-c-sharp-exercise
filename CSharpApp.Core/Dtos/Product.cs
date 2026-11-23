@@ -1,29 +1,25 @@
 namespace CSharpApp.Core.Dtos;
 
-/// <summary>A product as the upstream catalogue returns it; also used as the API response.</summary>
-public sealed class Product
+/// <summary>A product as the upstream catalogue returns it; also the API response (ADR-0009).</summary>
+/// <remarks>
+/// <c>Price</c> is decimal because create echoes fractional prices (F-02, ASM-05); <c>Images</c> is settable so it is
+/// deserialized (F-06); timestamps keep their offset (DateTimeOffset). Members the upstream may omit stay nullable.
+/// </remarks>
+public sealed record Product
 {
-    [JsonPropertyName("id")]
-    public int? Id { get; set; }
+    public int Id { get; init; }
 
-    [JsonPropertyName("title")]
-    public string? Title { get; set; }
+    public string? Title { get; init; }
 
-    [JsonPropertyName("price")]
-    public int? Price { get; set; }
+    public decimal Price { get; init; }
 
-    [JsonPropertyName("description")]
-    public string? Description { get; set; }
+    public string? Description { get; init; }
 
-    [JsonPropertyName("images")]
+    public Category? Category { get; init; }
+
     public IReadOnlyList<string> Images { get; init; } = [];
 
-    [JsonPropertyName("creationAt")]
-    public DateTime? CreationAt { get; set; }
+    public DateTimeOffset? CreationAt { get; init; }
 
-    [JsonPropertyName("updatedAt")]
-    public DateTime? UpdatedAt { get; set; }
-
-    [JsonPropertyName("category")]
-    public Category? Category { get; set; }
+    public DateTimeOffset? UpdatedAt { get; init; }
 }

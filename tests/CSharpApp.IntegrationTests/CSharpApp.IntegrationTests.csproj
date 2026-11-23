@@ -17,6 +17,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Test data builders shared by the unit and integration tests. -->
+  <ItemGroup>
+    <Compile Include="..\Shared\**\*.cs" Link="Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\CSharpApp.Api\CSharpApp.Api.csproj" />
   </ItemGroup>

@@ -97,6 +97,19 @@ public sealed class OptionsValidationTests
     }
 
     [Fact]
+    public void AttemptTimeoutAboveTotal_FailsValidation()
+    {
+        var settings = ValidSettings();
+        settings["HttpClientSettings:AttemptTimeoutSeconds"] = "20";
+        settings["HttpClientSettings:TotalTimeoutSeconds"] = "10";
+        using var provider = BuildProvider(settings);
+
+        var error = Assert.Throws<OptionsValidationException>(() => provider.GetRequiredService<IOptions<HttpClientSettings>>().Value);
+
+        Assert.Contains("AttemptTimeoutSeconds", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AttemptTimeoutOutOfRange_FailsValidation()
     {
         var settings = ValidSettings();
