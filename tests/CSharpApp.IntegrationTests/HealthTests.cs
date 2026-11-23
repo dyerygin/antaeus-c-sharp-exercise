@@ -51,6 +51,22 @@ public sealed class HealthTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task HealthReady_WithinCacheWindow_ProbesUpstreamOnce()
+    {
+        // A10 through DI: the readiness check must be the one cached instance, not a new check per request (review C I1).
+        await using var factory = new ApiFactory { Settings = { ["HttpClientSettings:HealthCheckCacheSeconds"] = "60" } };
+        factory.Upstream.StubRaw("GET", "categories", 200, "[]");
+        using var client = factory.CreateClient();
+
+        using var first = await client.GetAsync(new Uri("/health/ready", UriKind.Relative), Ct);
+        using var second = await client.GetAsync(new Uri("/health/ready", UriKind.Relative), Ct);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        Assert.Single(factory.Upstream.LogEntries, entry => string.Equals(entry.RequestMessage?.Path, "/api/v1/categories", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task HealthReady_UpstreamDown_Returns503()
     {
         _factory.Upstream.StubRaw("GET", "categories", 503);
