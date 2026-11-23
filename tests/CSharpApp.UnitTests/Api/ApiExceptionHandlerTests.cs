@@ -102,6 +102,14 @@ public sealed class ApiExceptionHandlerTests
     }
 
     [Fact]
+    public async Task UpstreamTimeout_Writes504Problem()
+    {
+        var (status, _) = await HandleAsync(new UpstreamTimeoutException("The upstream service did not answer in time."));
+
+        Assert.Equal(504, status);
+    }
+
+    [Fact]
     public async Task ClientAborted_Writes499WithoutBody()
     {
         var (status, body) = await HandleAsync(new OperationCanceledException(), clientAborted: true);

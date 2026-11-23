@@ -42,6 +42,7 @@ public sealed partial class ApiExceptionHandler(IProblemDetailsService problemDe
         BadHttpRequestException badRequest => Problem(badRequest.StatusCode, "The request could not be read."),
         UpstreamNotFoundException => Problem(StatusCodes.Status404NotFound, "The resource was not found."),
         UpstreamBadRequestException => Problem(StatusCodes.Status400BadRequest, "The upstream service rejected the request."),
+        UpstreamTimeoutException => Problem(StatusCodes.Status504GatewayTimeout, "The upstream service did not answer in time."),
         UpstreamException or BrokenCircuitException => Problem(StatusCodes.Status502BadGateway, "The upstream service is unavailable."),
         TimeoutRejectedException => Problem(StatusCodes.Status504GatewayTimeout, "The upstream service did not answer in time."),
         _ => Problem(StatusCodes.Status500InternalServerError, "An unexpected error occurred."),

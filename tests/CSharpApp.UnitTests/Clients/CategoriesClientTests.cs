@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using CSharpApp.Core.Dtos;
 using CSharpApp.Core.Exceptions;
+using CSharpApp.Core.Settings;
 using CSharpApp.Infrastructure.Clients;
 using CSharpApp.TestData.Builders;
 using CSharpApp.UnitTests.TestDoubles;
@@ -15,7 +16,8 @@ public sealed class CategoriesClientTests
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static CategoriesClient CreateClient(StubHttpMessageHandler handler) =>
-        new(new HttpClient(handler) { BaseAddress = new Uri(ProductsClientTests.Settings.BaseUrl) }, Options.Create(ProductsClientTests.Settings), NullLogger<CategoriesClient>.Instance);
+        new(new HttpClient(handler) { BaseAddress = new Uri(ProductsClientTests.Settings.BaseUrl) }, Options.Create(ProductsClientTests.Settings),
+            Options.Create(new HttpClientSettings()), NullLogger<CategoriesClient>.Instance);
 
     [Fact]
     public async Task GetAll_DeserializesCategories_IncludingSlug()

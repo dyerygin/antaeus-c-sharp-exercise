@@ -3,14 +3,16 @@ using System.Globalization;
 namespace CSharpApp.Infrastructure.Clients;
 
 /// <summary>Typed client for the upstream categories resource (ADR-0004).</summary>
-public sealed partial class CategoriesClient(HttpClient httpClient, IOptions<RestApiSettings> settings, ILogger<CategoriesClient> logger) : ICategoriesClient
+public sealed partial class CategoriesClient(HttpClient httpClient, IOptions<RestApiSettings> settings, IOptions<HttpClientSettings> http, ILogger<CategoriesClient> logger) : ICategoriesClient
 {
     private string Resource => settings.Value.Categories;
+
+    private TimeSpan Deadline => TimeSpan.FromSeconds(http.Value.TotalTimeoutSeconds);
 
     public async Task<IReadOnlyList<Category>> GetAllAsync(int limit, CancellationToken ct)
     {
         var uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"{Resource}?limit={limit}"), UriKind.Relative);
-        var categories = await httpClient.GetRequiredAsync<List<Category>>(uri, ct);
+        var categories = await httpClient.GetRequiredAsync<List<Category>>(uri, Deadline, ct);
         LogFetchedList(logger, categories.Count, limit);
         return categories;
     }
@@ -18,14 +20,14 @@ public sealed partial class CategoriesClient(HttpClient httpClient, IOptions<Res
     public async Task<Category> GetByIdAsync(int id, CancellationToken ct)
     {
         var uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"{Resource}/{id}"), UriKind.Relative);
-        var category = await httpClient.GetRequiredAsync<Category>(uri, ct);
+        var category = await httpClient.GetRequiredAsync<Category>(uri, Deadline, ct);
         LogFetchedOne(logger, id);
         return category;
     }
 
     public async Task<Category> CreateAsync(NewCategory category, CancellationToken ct)
     {
-        var created = await httpClient.PostRequiredAsync<NewCategory, Category>(new Uri(Resource, UriKind.Relative), category, ct);
+        var created = await httpClient.PostRequiredAsync<NewCategory, Category>(new Uri(Resource, UriKind.Relative), category, Deadline, ct);
         LogCreated(logger, created.Id);
         return created;
     }

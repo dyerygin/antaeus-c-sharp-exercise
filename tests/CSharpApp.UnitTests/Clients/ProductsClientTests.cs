@@ -27,8 +27,15 @@ public sealed class ProductsClientTests
         Password = "test-password",
     };
 
-    private static ProductsClient CreateClient(StubHttpMessageHandler handler) =>
-        new(new HttpClient(handler) { BaseAddress = new Uri(Settings.BaseUrl) }, Options.Create(Settings), NullLogger<ProductsClient>.Instance);
+    private static ProductsClient CreateClient(StubHttpMessageHandler handler, int totalTimeoutSeconds = 10) =>
+        new(new HttpClient(handler) { BaseAddress = new Uri(Settings.BaseUrl) }, Options.Create(Settings),
+            Options.Create(new HttpClientSettings { TotalTimeoutSeconds = totalTimeoutSeconds, AttemptTimeoutSeconds = 1 }), NullLogger<ProductsClient>.Instance);
+
+    private static StubHttpMessageHandler BodyFrom(Stream body) =>
+        new((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(body) { Headers = { ContentType = new("application/json") } },
+        }));
 
     [Fact]
     public async Task GetAll_DeserializesProducts_IncludingImagesAndDecimalPrice()
@@ -170,5 +177,50 @@ public sealed class ProductsClientTests
         await cts.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateClient(handler).GetAllAsync(0, 20, cts.Token));
+    }
+
+    [Fact]
+    public async Task GetById_BodyStallsBeyondTimeout_ThrowsUpstreamTimeout()
+    {
+        // Headers arrive, the body never does: the read must still end at the configured total timeout (review A I-1).
+        var handler = BodyFrom(new StallingStream());
+        using var guard = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        guard.CancelAfter(TimeSpan.FromSeconds(5));
+
+        await Assert.ThrowsAsync<UpstreamTimeoutException>(() =>
+            CreateClient(handler, totalTimeoutSeconds: 1).GetByIdAsync(1, guard.Token));
+    }
+
+    [Fact]
+    public async Task GetById_BodyBrokenMidStream_ThrowsUnavailable()
+    {
+        var handler = BodyFrom(new BrokenStream());
+
+        var error = await Assert.ThrowsAsync<UpstreamUnavailableException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
+
+        Assert.IsAssignableFrom<IOException>(error.InnerException);
+    }
+
+    /// <summary>A body whose bytes never come; only cancellation ends a read.</summary>
+    private sealed class StallingStream : MemoryStream
+    {
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return 0;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+    }
+
+    /// <summary>A body whose connection resets after the headers.</summary>
+    private sealed class BrokenStream : MemoryStream
+    {
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+            ValueTask.FromException<int>(new IOException("Connection reset by peer"));
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
     }
 }

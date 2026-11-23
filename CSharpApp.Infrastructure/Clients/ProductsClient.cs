@@ -3,14 +3,16 @@ using System.Globalization;
 namespace CSharpApp.Infrastructure.Clients;
 
 /// <summary>Typed client for the upstream products resource (ADR-0004).</summary>
-public sealed partial class ProductsClient(HttpClient httpClient, IOptions<RestApiSettings> settings, ILogger<ProductsClient> logger) : IProductsClient
+public sealed partial class ProductsClient(HttpClient httpClient, IOptions<RestApiSettings> settings, IOptions<HttpClientSettings> http, ILogger<ProductsClient> logger) : IProductsClient
 {
     private string Resource => settings.Value.Products;
+
+    private TimeSpan Deadline => TimeSpan.FromSeconds(http.Value.TotalTimeoutSeconds);
 
     public async Task<IReadOnlyList<Product>> GetAllAsync(int offset, int limit, CancellationToken ct)
     {
         var uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"{Resource}?offset={offset}&limit={limit}"), UriKind.Relative);
-        var products = await httpClient.GetRequiredAsync<List<Product>>(uri, ct);
+        var products = await httpClient.GetRequiredAsync<List<Product>>(uri, Deadline, ct);
         LogFetchedPage(logger, products.Count, offset, limit);
         return products;
     }
@@ -18,14 +20,14 @@ public sealed partial class ProductsClient(HttpClient httpClient, IOptions<RestA
     public async Task<Product> GetByIdAsync(int id, CancellationToken ct)
     {
         var uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"{Resource}/{id}"), UriKind.Relative);
-        var product = await httpClient.GetRequiredAsync<Product>(uri, ct);
+        var product = await httpClient.GetRequiredAsync<Product>(uri, Deadline, ct);
         LogFetchedOne(logger, id);
         return product;
     }
 
     public async Task<Product> CreateAsync(NewProduct product, CancellationToken ct)
     {
-        var created = await httpClient.PostRequiredAsync<NewProduct, Product>(new Uri(Resource, UriKind.Relative), product, ct);
+        var created = await httpClient.PostRequiredAsync<NewProduct, Product>(new Uri(Resource, UriKind.Relative), product, Deadline, ct);
         LogCreated(logger, created.Id);
         return created;
     }

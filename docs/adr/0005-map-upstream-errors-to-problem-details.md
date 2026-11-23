@@ -13,10 +13,12 @@ alone turns every missing product into 400. Errors must never echo upstream bodi
 
 - `EnsureUpstreamSuccessAsync`: 404, or 400 with `EntityNotFoundError` → `UpstreamNotFoundException`; other 400/422 →
   `UpstreamBadRequestException` (upstream `message` kept for logs only); 401/403, 3xx, 5xx → `UpstreamUnavailableException`.
-  Transport errors → unavailable; a 2xx with an empty, `null` or malformed body → `UpstreamContractException`.
+  Transport errors, including a reset mid-body → unavailable; a 2xx with an empty, `null` or malformed body →
+  `UpstreamContractException`. Headers and the streamed body share one `TotalTimeoutSeconds` deadline →
+  `UpstreamTimeoutException`.
 - `ApiExceptionHandler` writes ProblemDetails with `traceId`: `RequestValidationException` → 400 ValidationProblem;
   `BadHttpRequestException` → its status; not found → 404; upstream bad request → 400; unavailable, contract error or
-  broken circuit → 502; timeout → 504; client abort → 499 without a body; anything else → 500 with a generic title.
+  broken circuit → 502; either timeout → 504; client abort → 499 without a body; anything else → 500 with a generic title.
 
 ## Alternatives considered
 
@@ -29,4 +31,5 @@ alone turns every missing product into 400. Errors must never echo upstream bodi
 ## Links
 
 Findings F-07, F-08; ASM-10. Tests: `UpstreamResponseExtensionsTests`, `ApiExceptionHandlerTests`,
-`GetProducts_UpstreamFailure_ReturnsProblemWithTraceId`, `GetProducts_UpstreamDelayBeyondTimeout_Returns504`.
+`GetProducts_UpstreamFailure_ReturnsProblemWithTraceId`, `GetProducts_UpstreamDelayBeyondTimeout_Returns504`,
+`GetById_BodyStallsBeyondTimeout_ThrowsUpstreamTimeout`.
