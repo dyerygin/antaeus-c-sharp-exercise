@@ -3,6 +3,14 @@ using Microsoft.Extensions.Options;
 using static CSharpApp.UpstreamMock.MockContracts;
 
 // A fake of the upstream contract subset (ADR-0003, ASM-01): the original service is offline (ASM-02).
+// The container health check runs this process with --health-probe; it probes the running mock and exits.
+if (args.Contains(HealthProbe.Argument, StringComparer.Ordinal))
+{
+    Environment.ExitCode = await HealthProbe.RunAsync(
+        HealthProbe.PortFrom(Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS")), TimeSpan.FromSeconds(2));
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOptions<MockAuthSettings>().BindConfiguration(MockAuthSettings.SectionName).ValidateDataAnnotations().ValidateOnStart();
 builder.Services.AddSingleton(TimeProvider.System);

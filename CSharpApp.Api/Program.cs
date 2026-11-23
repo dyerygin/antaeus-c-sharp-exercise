@@ -4,6 +4,14 @@ using CSharpApp.Api.Health;
 using CSharpApp.Api.Middleware;
 using CSharpApp.Api.RateLimiting;
 
+// ADR-0017: the container health check runs this process with --health-probe; it probes the running instance and exits.
+if (args.Contains(HealthProbe.Argument, StringComparer.Ordinal))
+{
+    Environment.ExitCode = await HealthProbe.RunAsync(
+        HealthProbe.PortFrom(Environment.GetEnvironmentVariable("ASPNETCORE_HTTP_PORTS")), TimeSpan.FromSeconds(2));
+    return;
+}
+
 // F-13: a bootstrap logger reports start-up failures (for example invalid settings) before configuration is read.
 // It is a plain logger, not Serilog's reloadable one: that one can be frozen once per process, which breaks a second
 // host in the same process (every WebApplicationFactory in the tests). Each host builds its own logger instead.
