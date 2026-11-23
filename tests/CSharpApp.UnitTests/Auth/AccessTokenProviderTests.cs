@@ -182,6 +182,30 @@ public sealed class AccessTokenProviderTests
     }
 
     [Fact]
+    public async Task CallerCancelledDuringLogin_LoginStillCachesToken()
+    {
+        // Review B I2: the login must not run on the first caller's token. That token carries the caller's attempt
+        // timeout (shorter than AuthTimeoutSeconds) and its client abort; either would cancel the login for everyone.
+        var release = new TaskCompletionSource<AuthTokens>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _auth.LoginAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(call => release.Task.WaitAsync(call.Arg<CancellationToken>()));
+        var provider = CreateProvider();
+        using var firstCaller = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+
+        var first = provider.GetTokenAsync(firstCaller.Token).AsTask();
+        await firstCaller.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        var tokens = Tokens("a", TimeSpan.FromDays(20));
+        release.SetResult(tokens);
+        using var guard = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        guard.CancelAfter(TimeSpan.FromSeconds(5));
+        var token = await provider.GetTokenAsync(guard.Token);
+
+        Assert.Equal(tokens.AccessToken, token);
+        await _auth.Received(1).LoginAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Tokens_AreNeverLogged()
     {
         var tokens = Tokens("a", TimeSpan.FromDays(20));

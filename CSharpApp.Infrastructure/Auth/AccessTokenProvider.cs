@@ -6,7 +6,7 @@ namespace CSharpApp.Infrastructure.Auth;
 /// recycles pooled connections every 2 minutes (ADR-0004). Tokens and credentials are never logged.
 /// </remarks>
 public sealed partial class AccessTokenProvider(IAuthClient auth, IOptions<RestApiSettings> settings, TimeProvider time, ILogger<AccessTokenProvider> logger)
-    : IAccessTokenProvider, IDisposable
+    : IAccessTokenProvider
 {
     // Without a readable exp the token is reused this long; the upstream's tokens normally last 20 days (ASM-04).
     private static readonly TimeSpan UnknownLifetime = TimeSpan.FromMinutes(5);
@@ -14,8 +14,9 @@ public sealed partial class AccessTokenProvider(IAuthClient auth, IOptions<RestA
     // R41: renew min(60 s, 10 % of the lifetime) early, so short-lived tokens are not expired on arrival.
     private static readonly TimeSpan MaxSkew = TimeSpan.FromSeconds(60);
 
-    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Lock _sync = new();
     private CachedToken? _current;
+    private Task<CachedToken>? _renewal;
 
     public async ValueTask<string> GetTokenAsync(CancellationToken ct)
     {
@@ -24,26 +25,28 @@ public sealed partial class AccessTokenProvider(IAuthClient auth, IOptions<RestA
             return cached;
         }
 
-        await _gate.WaitAsync(ct);
-        try
+        Task<CachedToken> renewal;
+        lock (_sync)
         {
-            // Double check: the caller that held the gate may have renewed the token already (one login for many).
-            var current = Volatile.Read(ref _current);
-            if (FreshToken(current) is { } renewed)
+            // Double check: another caller may have renewed the token already (one login for many).
+            if (FreshToken(_current) is { } renewed)
             {
                 return renewed;
             }
 
-            var tokens = current is null ? await LoginAsync(ct) : await RefreshOrLoginAsync(current.RefreshToken, ct);
-            var next = Cache(tokens);
-            Volatile.Write(ref _current, next);
-            return next.AccessToken;
+            // Review B I2: one shared renewal that runs on no caller's token. A caller's token carries its attempt
+            // timeout and its client abort, which would cancel the login for every waiter; AuthClient bounds the
+            // call with its own timeout (R32). A finished (also a failed) renewal is replaced, so the next caller retries.
+            if (_renewal is null || _renewal.IsCompleted)
+            {
+                _renewal = RenewAsync(_current);
+            }
+
+            renewal = _renewal;
         }
-        finally
-        {
-            // R32: released even when login fails or times out, so the next caller can try again.
-            _gate.Release();
-        }
+
+        // Each caller stops waiting on its own token; the renewal goes on for the others.
+        return (await renewal.WaitAsync(ct)).AccessToken;
     }
 
     public void Invalidate(string token)
@@ -58,10 +61,20 @@ public sealed partial class AccessTokenProvider(IAuthClient auth, IOptions<RestA
         }
     }
 
-    public void Dispose() => _gate.Dispose();
-
     private string? FreshToken(CachedToken? token) =>
         token is not null && time.GetUtcNow() < token.RenewAt ? token.AccessToken : null;
+
+    private async Task<CachedToken> RenewAsync(CachedToken? current)
+    {
+        // Yield first, so the renewal is never completed inside the caller's lock.
+        await Task.Yield();
+        var tokens = current is null
+            ? await LoginAsync(CancellationToken.None)
+            : await RefreshOrLoginAsync(current.RefreshToken, CancellationToken.None);
+        var next = Cache(tokens);
+        Volatile.Write(ref _current, next);
+        return next;
+    }
 
     private async Task<AuthTokens> LoginAsync(CancellationToken ct)
     {

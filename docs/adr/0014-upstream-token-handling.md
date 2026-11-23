@@ -14,8 +14,9 @@ guards only `auth/profile` (ASM-06), so the 401 path is exercised against our mo
 - `AuthClient` (no bearer, no retry, `AuthTimeoutSeconds` = 10) logs in and refreshes; `JwtExpiry.Read` reads `exp`
   without verifying the signature (we only forward the token). Tokens and credentials are never logged.
 - `AccessTokenProvider` (singleton) caches until `exp` minus `min(60 s, 10 % of the lifetime)`, or 5 minutes without a
-  readable `exp`; a `SemaphoreSlim` with a double check gives one login for concurrent callers and is released in
-  `finally`; refresh first, then login. `Invalidate` drops only the token that was rejected.
+  readable `exp`; concurrent callers share one in-flight renewal (refresh first, then login) that runs on no caller's
+  token, so one caller's timeout or abort cannot cancel it for the others; each caller stops waiting on its own token,
+  and a failed renewal is replaced on the next call. `Invalidate` drops only the token that was rejected.
 - `BearerTokenHandler` on the products and categories clients, inside the resilience handler: it sets the Bearer header
   and, on a 401, invalidates the token and resends **once** with a new one (the body buffered before the first send).
   This is the one exception to "never retry POST" (ADR-0004): the upstream rejects a 401 before processing it. A second
@@ -24,6 +25,7 @@ guards only `auth/profile` (ASM-06), so the 401 path is exercised against our mo
 ## Alternatives considered
 
 - **Re-login only:** simpler, and the fallback either way. **A lock-free cache:** concurrent first calls all log in.
+  **A lock held around the login:** the login then runs on the first caller's token and dies with its attempt timeout.
 
 ## Consequences
 
@@ -33,5 +35,6 @@ guards only `auth/profile` (ASM-06), so the 401 path is exercised against our mo
 ## Links
 
 ASM-04, ASM-06, ASM-15. Tests: `GetTokenAsync_ConcurrentCallers_LoginOnce`, `OneMinuteToken_LoginOnceThenReuse`,
-`Login_Hangs_TimesOutAndReleasesLock`, `Invalidate_StaleToken_KeepsCurrent`, `Send_401Twice_RetriesOnce`,
+`Login_Hangs_TimesOutAndReleasesLock`, `CallerCancelledDuringLogin_LoginStillCachesToken`,
+`Invalidate_StaleToken_KeepsCurrent`, `Send_401Twice_RetriesOnce`,
 `Send_Post401_ResendsSameBody`, `Create_Upstream401Twice_ResentOnceThenUnavailable`.
