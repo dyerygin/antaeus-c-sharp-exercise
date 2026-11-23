@@ -82,9 +82,9 @@ jobs:
         with:
           node-version: "22"
 
-      # README.md is still the exercise statement; it moves to docs/TASK.md (kept verbatim, excluded).
+      # docs/TASK.md is the exercise statement, kept verbatim, so it is excluded.
       - name: markdownlint
-        run: npx --yes markdownlint-cli2@0.24.2 "**/*.md" "#README.md" "#docs/TASK.md" "#**/bin/**" "#**/obj/**"
+        run: npx --yes markdownlint-cli2@0.24.2 "**/*.md" "#docs/TASK.md" "#**/bin/**" "#**/obj/**"
 
       # Both scans read .gitleaksignore: history fingerprints and working-tree fingerprints (relative paths).
       - name: gitleaks (history)

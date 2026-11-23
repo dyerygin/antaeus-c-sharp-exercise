@@ -113,6 +113,10 @@ curl -s -X POST http://localhost:5081/api/v1/auth/login \
 curl -s "http://localhost:5081/api/v1/products?limit=2"
 ```
 
+In Docker (`docker-compose.yml`) the mock runs with tokens required on resources and 5-minute tokens, on host port
+8081. Its container health check runs `dotnet CSharpApp.UpstreamMock.dll --health-probe`, which calls `/health/live`
+and exits 0 or 1 (ADR-0017).
+
 ## Tests
 
 ```bash
