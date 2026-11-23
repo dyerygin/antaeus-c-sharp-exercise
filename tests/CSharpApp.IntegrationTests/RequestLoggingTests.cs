@@ -7,7 +7,7 @@ using Serilog.Events;
 
 namespace CSharpApp.IntegrationTests;
 
-/// <summary>T8: request log events carry no query string, headers, body or client IP.</summary>
+/// <summary>T8: the request log line carries method, path, status and time only: no query string, headers, body or client IP.</summary>
 public sealed class RequestLoggingTests
 {
     [Fact]
@@ -22,10 +22,12 @@ public sealed class RequestLoggingTests
 
         using var response = await client.GetAsync(new Uri("/openapi/v1.json?token=secret-value", UriKind.Relative), TestContext.Current.CancellationToken);
 
-        var request = Assert.Single(sink.Events, e => e.Properties.ContainsKey("RoutePattern"));
-        string[] expected = ["Elapsed", "RequestMethod", "RoutePattern", "StatusCode"];
+        // Feature #4 (ADR-0015): our RequestTimingMiddleware writes the one inbound line per request.
+        var request = Assert.Single(sink.Events, e => e.MessageTemplate.Text.StartsWith("HTTP ", StringComparison.Ordinal));
+        // RequestId and RequestPath come from the ASP.NET Core hosting scope that wraps every line of a request.
+        string[] expected = ["ElapsedMs", "EventId", "Method", "Path", "RequestId", "RequestPath", "StatusCode"];
         Assert.Equal(expected, request.Properties.Keys.Where(k => k is not "SourceContext").Order(StringComparer.Ordinal), StringComparer.Ordinal);
-        Assert.Equal("/openapi/{documentName}.json", Assert.IsType<ScalarValue>(request.Properties["RoutePattern"]).Value);
+        Assert.Equal("/openapi/v1.json", Assert.IsType<ScalarValue>(request.Properties["Path"]).Value);
         Assert.DoesNotContain("secret-value", request.RenderMessage(), StringComparison.Ordinal);
     }
 

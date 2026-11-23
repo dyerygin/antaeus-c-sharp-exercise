@@ -1,5 +1,6 @@
 using CSharpApp.Infrastructure.Auth;
 using CSharpApp.Infrastructure.Clients;
+using CSharpApp.Infrastructure.Diagnostics;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 
@@ -22,11 +23,15 @@ public static class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-            AddUpstreamPipeline(services.AddHttpClient<IProductsClient, ProductsClient>(ConfigureUpstream));
-            AddUpstreamPipeline(services.AddHttpClient<ICategoriesClient, CategoriesClient>(ConfigureUpstream));
+            services.AddMetrics();
+            services.TryAddSingleton<UpstreamMetrics>();
+            AddUpstreamPipeline(services.AddHttpClient<IProductsClient, ProductsClient>(ConfigureUpstream), "products");
+            AddUpstreamPipeline(services.AddHttpClient<ICategoriesClient, CategoriesClient>(ConfigureUpstream), "categories");
 
             // ADR-0014: login and refresh get no bearer and no retry; AuthClient has its own timeout (R32).
-            UseUpstreamPrimaryHandler(services.AddHttpClient<IAuthClient, AuthClient>(ConfigureUpstream));
+            var auth = services.AddHttpClient<IAuthClient, AuthClient>(ConfigureUpstream);
+            AddTiming(auth, "auth");
+            UseUpstreamPrimaryHandler(auth);
             services.TryAddSingleton(TimeProvider.System);
             services.AddSingleton<AccessTokenProvider>();
             services.AddSingleton<IAccessTokenProvider>(provider => provider.GetRequiredService<AccessTokenProvider>());
@@ -36,8 +41,10 @@ public static class DependencyInjection
     }
 
     /// <summary>The shared outbound pipeline of every upstream client (ADR-0004).</summary>
-    private static void AddUpstreamPipeline(IHttpClientBuilder builder)
+    private static void AddUpstreamPipeline(IHttpClientBuilder builder, string client)
     {
+        // ADR-0015, R38: the first handler added is the outermost, so the time covers retries and the 401 resend.
+        AddTiming(builder, client);
         UseUpstreamPrimaryHandler(builder);
 
         builder.AddStandardResilienceHandler().Configure((options, provider) =>
@@ -57,6 +64,15 @@ public static class DependencyInjection
         // resend stays within that attempt's timeout.
         builder.AddHttpMessageHandler<BearerTokenHandler>();
     }
+
+    /// <summary>Feature #4: logs and counts each call of <paramref name="client"/> (ADR-0015).</summary>
+    private static void AddTiming(IHttpClientBuilder builder, string client) =>
+        builder.AddHttpMessageHandler(provider => new UpstreamTimingHandler(
+            client,
+            provider.GetRequiredService<ILogger<UpstreamTimingHandler>>(),
+            provider.GetRequiredService<UpstreamMetrics>(),
+            provider.GetRequiredService<TimeProvider>(),
+            provider.GetRequiredService<IOptions<HttpClientSettings>>()));
 
     /// <summary>A4: never follow redirects to another host; recycle pooled connections so DNS changes are seen.</summary>
     private static void UseUpstreamPrimaryHandler(IHttpClientBuilder builder) =>

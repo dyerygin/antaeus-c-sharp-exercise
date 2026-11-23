@@ -4,6 +4,7 @@ using CSharpApp.Core.Exceptions;
 using CSharpApp.Core.Interfaces;
 using CSharpApp.Infrastructure;
 using CSharpApp.Infrastructure.Auth;
+using CSharpApp.Infrastructure.Diagnostics;
 using CSharpApp.TestData.Builders;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -191,5 +192,26 @@ public sealed class ResiliencePipelineTests : IDisposable
             Assert.IsNotType<BearerTokenHandler>(delegating);
             handler = delegating.InnerHandler!;
         }
+    }
+
+    [Theory]
+    [InlineData(nameof(IProductsClient))]
+    [InlineData(nameof(ICategoriesClient))]
+    [InlineData("IAuthClient")]
+    public void UpstreamClients_HaveTimingHandlerOutermost(string clientName)
+    {
+        // ADR-0015, R38: outermost, so the logged time covers retries, the token and the 401 resend.
+        var chain = new List<Type>();
+        HttpMessageHandler handler = _services.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(clientName);
+        while (handler is DelegatingHandler delegating)
+        {
+            chain.Add(delegating.GetType());
+            handler = delegating.InnerHandler!;
+        }
+
+        var timing = chain.IndexOf(typeof(UpstreamTimingHandler));
+        var resilience = chain.FindIndex(t => t.Name.Contains("Resilience", StringComparison.Ordinal));
+        Assert.True(timing >= 0 && (resilience < 0 || timing < resilience), string.Join(" -> ", chain.Select(t => t.Name)));
+        Assert.Single(chain, t => t == typeof(UpstreamTimingHandler));
     }
 }
