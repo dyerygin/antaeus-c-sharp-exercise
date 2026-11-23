@@ -1,0 +1,182 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "john@mail.com",
+      "password": "changeme",
+      "name": "Jhon",
+      "role": "customer",
+      "avatar": "https://i.imgur.com/avatar-1.jpeg"
+    },
+    {
+      "id": 2,
+      "email": "maria@mail.com",
+      "password": "12345",
+      "name": "Maria",
+      "role": "customer",
+      "avatar": "https://i.imgur.com/avatar-2.jpeg"
+    },
+    {
+      "id": 3,
+      "email": "admin@mail.com",
+      "password": "admin123",
+      "name": "Admin",
+      "role": "admin",
+      "avatar": "https://i.imgur.com/avatar-3.jpeg"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Clothes",
+      "slug": "clothes",
+      "image": "https://i.imgur.com/category-clothes.jpeg",
+      "creationAt": "2026-01-01T00:00:00+00:00",
+      "updatedAt": "2026-01-01T00:00:00+00:00"
+    },
+    {
+      "id": 2,
+      "name": "Electronics",
+      "slug": "electronics",
+      "image": "https://i.imgur.com/category-electronics.jpeg",
+      "creationAt": "2026-01-01T00:00:00+00:00",
+      "updatedAt": "2026-01-01T00:00:00+00:00"
+    },
+    {
+      "id": 3,
+      "name": "Furniture",
+      "slug": "furniture",
+      "image": "https://i.imgur.com/category-furniture.jpeg",
+      "creationAt": "2026-01-01T00:00:00+00:00",
+      "updatedAt": "2026-01-01T00:00:00+00:00"
+    },
+    {
+      "id": 4,
+      "name": "Shoes",
+      "slug": "shoes",
+      "image": "https://i.imgur.com/category-shoes.jpeg",
+      "creationAt": "2026-01-01T00:00:00+00:00",
+      "updatedAt": "2026-01-01T00:00:00+00:00"
+    },
+    {
+      "id": 5,
+      "name": "Miscellaneous",
+      "slug": "miscellaneous",
+      "image": "https://i.imgur.com/category-miscellaneous.jpeg",
+      "creationAt": "2026-01-01T00:00:00+00:00",
+      "updatedAt": "2026-01-01T00:00:00+00:00"
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "title": "Classic Heather Gray Hoodie",
+      "price": 69,
+      "description": "Classic Heather Gray Hoodie: a seeded product of the upstream mock.",
+      "categoryId": 1,
+      "images": [
+        "https://i.imgur.com/mock-1-1.jpeg",
+        "https://i.imgur.com/mock-1-2.jpeg"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Classic Black T-Shirt",
+      "price": 35,
+      "description": "Classic Black T-Shirt: a seeded product of the upstream mock.",
+      "categoryId": 1,
+      "images": [
+        "https://i.imgur.com/mock-2-1.jpeg",
+        "https://i.imgur.com/mock-2-2.jpeg"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Sleek Wireless Headphones",
+      "price": 89,
+      "description": "Sleek Wireless Headphones: a seeded product of the upstream mock.",
+      "categoryId": 2,
+      "images": [
+        "https://i.imgur.com/mock-3-1.jpeg",
+        "https://i.imgur.com/mock-3-2.jpeg"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Smartwatch with Fitness Tracking",
+      "price": 120,
+      "description": "Smartwatch with Fitness Tracking: a seeded product of the upstream mock.",
+      "categoryId": 2,
+      "images": [
+        "https://i.imgur.com/mock-4-1.jpeg",
+        "https://i.imgur.com/mock-4-2.jpeg"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Modern Wooden Chair",
+      "price": 79,
+      "description": "Modern Wooden Chair: a seeded product of the upstream mock.",
+      "categoryId": 3,
+      "images": [
+        "https://i.imgur.com/mock-5-1.jpeg",
+        "https://i.imgur.com/mock-5-2.jpeg"
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Minimalist Desk Lamp",
+      "price": 42,
+      "description": "Minimalist Desk Lamp: a seeded product of the upstream mock.",
+      "categoryId": 3,
+      "images": [
+        "https://i.imgur.com/mock-6-1.jpeg",
+        "https://i.imgur.com/mock-6-2.jpeg"
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Running Sneakers",
+      "price": 95,
+      "description": "Running Sneakers: a seeded product of the upstream mock.",
+      "categoryId": 4,
+      "images": [
+        "https://i.imgur.com/mock-7-1.jpeg",
+        "https://i.imgur.com/mock-7-2.jpeg"
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Leather Ankle Boots",
+      "price": 130,
+      "description": "Leather Ankle Boots: a seeded product of the upstream mock.",
+      "categoryId": 4,
+      "images": [
+        "https://i.imgur.com/mock-8-1.jpeg",
+        "https://i.imgur.com/mock-8-2.jpeg"
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Ceramic Coffee Mug",
+      "price": 15,
+      "description": "Ceramic Coffee Mug: a seeded product of the upstream mock.",
+      "categoryId": 5,
+      "images": [
+        "https://i.imgur.com/mock-9-1.jpeg",
+        "https://i.imgur.com/mock-9-2.jpeg"
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Canvas Tote Bag",
+      "price": 22,
+      "description": "Canvas Tote Bag: a seeded product of the upstream mock.",
+      "categoryId": 5,
+      "images": [
+        "https://i.imgur.com/mock-10-1.jpeg",
+        "https://i.imgur.com/mock-10-2.jpeg"
+      ]
+    }
+  ]
+}

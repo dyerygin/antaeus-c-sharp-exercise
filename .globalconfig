@@ -1,0 +1,7 @@
+# Analyzer severities for every project (ADR-0002). Every deviation from the analyzers' defaults
+# carries its reason; keep this file short.
+is_global = true
+
+# MA0004 (ConfigureAwait(false)): ASP.NET Core has no SynchronizationContext and these assemblies
+# are not general-purpose libraries, so ConfigureAwait(false) on every await only adds noise.
+dotnet_diagnostic.MA0004.severity = none

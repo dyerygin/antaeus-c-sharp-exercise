@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="CSharpApp.Api/CSharpApp.Api.csproj" />
+    <Project Path="CSharpApp.Application/CSharpApp.Application.csproj" />
+    <Project Path="CSharpApp.Core/CSharpApp.Core.csproj" />
+    <Project Path="CSharpApp.Infrastructure/CSharpApp.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/mocks/">
+    <Project Path="mocks/CSharpApp.UpstreamMock/CSharpApp.UpstreamMock.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CSharpApp.IntegrationTests/CSharpApp.IntegrationTests.csproj" />
+    <Project Path="tests/CSharpApp.UnitTests/CSharpApp.UnitTests.csproj" />
+    <Project Path="tests/CSharpApp.UpstreamMock.Tests/CSharpApp.UpstreamMock.Tests.csproj" />
+  </Folder>
+</Solution>

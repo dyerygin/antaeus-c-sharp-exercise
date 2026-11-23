@@ -1,0 +1,217 @@
+using System.Text.Json;
+using CSharpApp.Core.Dtos;
+using CSharpApp.Core.Exceptions;
+using CSharpApp.Core.Interfaces;
+using CSharpApp.Infrastructure;
+using CSharpApp.Infrastructure.Auth;
+using CSharpApp.Infrastructure.Diagnostics;
+using CSharpApp.TestData.Builders;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using WireMock.RequestBuilders;
+using WireMock.ResponseBuilders;
+using WireMock.Server;
+
+namespace CSharpApp.IntegrationTests.Upstream;
+
+/// <summary>The registered client pipeline (ADR-0004) against a real HTTP server on a random port.</summary>
+public sealed class ResiliencePipelineTests : IDisposable
+{
+    private readonly WireMockServer _upstream = WireMockServer.Start();
+    private readonly ServiceProvider _services;
+    private readonly string _token;
+
+    public ResiliencePipelineTests()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["RestApiSettings:BaseUrl"] = $"{_upstream.Url}/api/v1/",
+            ["RestApiSettings:Products"] = "products",
+            ["RestApiSettings:Categories"] = "categories",
+            ["RestApiSettings:Auth"] = "auth/login",
+            ["RestApiSettings:RefreshToken"] = "auth/refresh-token",
+            ["RestApiSettings:Profile"] = "auth/profile",
+            ["RestApiSettings:Username"] = "user@test",
+            ["RestApiSettings:Password"] = "test-password",
+            ["HttpClientSettings:RetryBaseDelayMs"] = "1",
+            ["HttpClientSettings:AttemptTimeoutSeconds"] = "2",
+            ["HttpClientSettings:TotalTimeoutSeconds"] = "5",
+        }).Build();
+        _services = new ServiceCollection().AddLogging().AddInfrastructure(configuration).BuildServiceProvider();
+        _token = _upstream.StubLogin();
+    }
+
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    public void Dispose()
+    {
+        _services.Dispose();
+        _upstream.Dispose();
+    }
+
+    [Fact]
+    public async Task Create_Upstream500_NotRetried()
+    {
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(500));
+        var client = _services.GetRequiredService<IProductsClient>();
+
+        await Assert.ThrowsAsync<UpstreamUnavailableException>(() =>
+            client.CreateAsync(new NewProduct("Lamp", 10m, "A lamp", 1, ["https://images.test/lamp.png"]), Ct));
+
+        Assert.Single(_upstream.ResourceEntries);
+    }
+
+    [Fact]
+    public async Task GetAll_Upstream500ThenOk_RetriedAndSucceeds()
+    {
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingGet())
+            .InScenario("flaky").WillSetStateTo("recovered")
+            .RespondWith(Response.Create().WithStatusCode(500));
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingGet())
+            .InScenario("flaky").WhenStateIs("recovered")
+            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
+                .WithBody(JsonSerializer.Serialize(new[] { new ProductBuilder().Build() }, JsonSerializerOptions.Web)));
+        var client = _services.GetRequiredService<IProductsClient>();
+
+        var products = await client.GetAllAsync(0, 20, Ct);
+
+        Assert.Single(products);
+        Assert.Equal(2, _upstream.ResourceEntries.Count);
+    }
+
+    [Fact]
+    public async Task RepeatedCalls_Succeed()
+    {
+        // F-01 regression: the base code set BaseAddress on a shared HttpClient per call, so the second call failed.
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingGet())
+            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json").WithBody("[]"));
+        var client = _services.GetRequiredService<IProductsClient>();
+
+        await client.GetAllAsync(0, 20, Ct);
+        await _services.GetRequiredService<IProductsClient>().GetAllAsync(0, 20, Ct);
+
+        Assert.Equal(2, _upstream.ResourceEntries.Count);
+    }
+
+    [Theory]
+    [InlineData(nameof(IProductsClient))]
+    [InlineData(nameof(ICategoriesClient))]
+    public void ClientTimeout_IsInfinite(string clientName)
+    {
+        // HttpClient.Timeout (100 s by default) must not cut a call before the configured total timeout;
+        // the standard resilience handler sets it to infinite, so only the configured timeouts apply.
+        using var client = _services.GetRequiredService<IHttpClientFactory>().CreateClient(clientName);
+
+        Assert.Equal(Timeout.InfiniteTimeSpan, client.Timeout);
+    }
+
+    [Fact]
+    public void AccessTokenProvider_IsOneSingleton()
+    {
+        // The single login depends on every caller sharing one cache and one login gate.
+        Assert.Same(_services.GetRequiredService<IAccessTokenProvider>(), _services.GetRequiredService<IAccessTokenProvider>());
+    }
+
+    [Theory]
+    [InlineData(nameof(IProductsClient))]
+    [InlineData(nameof(ICategoriesClient))]
+    [InlineData("IAuthClient")]
+    public void PrimaryHandler_IsSocketsHttpHandler_WithoutAutoRedirect(string clientName)
+    {
+        var factory = _services.GetRequiredService<IHttpMessageHandlerFactory>();
+
+        HttpMessageHandler handler = factory.CreateHandler(clientName);
+        while (handler is DelegatingHandler delegating)
+        {
+            handler = delegating.InnerHandler!;
+        }
+
+        var primary = Assert.IsType<SocketsHttpHandler>(handler);
+        Assert.False(primary.AllowAutoRedirect);
+        Assert.Equal(TimeSpan.FromMinutes(2), primary.PooledConnectionLifetime);
+    }
+
+    [Fact]
+    public async Task GetAll_SendsBearerTokenFromOneLogin()
+    {
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingGet().WithHeader("Authorization", $"Bearer {_token}"))
+            .AtPriority(1)
+            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json").WithBody("[]"));
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingGet())
+            .AtPriority(2)
+            .RespondWith(Response.Create().WithStatusCode(401));
+        var client = _services.GetRequiredService<IProductsClient>();
+
+        await client.GetAllAsync(0, 20, Ct);
+        await client.GetAllAsync(0, 20, Ct);
+
+        Assert.Equal(2, _upstream.ResourceEntries.Count);
+        Assert.Single(_upstream.LoginEntries);
+    }
+
+    [Fact]
+    public async Task Create_Upstream401Twice_ResentOnceThenUnavailable()
+    {
+        // ADR-0014: one resend after 401 even for POST (rejected before processing); the second 401 → 502, no loop.
+        _upstream.Given(Request.Create().WithPath("/api/v1/products").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(401));
+        var client = _services.GetRequiredService<IProductsClient>();
+
+        await Assert.ThrowsAsync<UpstreamUnavailableException>(() =>
+            client.CreateAsync(new NewProduct("Lamp", 10m, "A lamp", 1, ["https://images.test/lamp.png"]), Ct));
+
+        Assert.Equal(2, _upstream.ResourceEntries.Count);
+    }
+
+    [Theory]
+    [InlineData(nameof(IProductsClient))]
+    [InlineData(nameof(ICategoriesClient))]
+    public void ResourceClients_HaveBearerHandlerInsideResilience(string clientName)
+    {
+        // ADR-0014: below the resilience handler, so each retry attempt gets the current token.
+        var chain = new List<Type>();
+        HttpMessageHandler handler = _services.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(clientName);
+        while (handler is DelegatingHandler delegating)
+        {
+            chain.Add(delegating.GetType());
+            handler = delegating.InnerHandler!;
+        }
+
+        var bearer = chain.IndexOf(typeof(BearerTokenHandler));
+        var resilience = chain.FindIndex(t => t.Name.Contains("Resilience", StringComparison.Ordinal));
+        Assert.True(resilience >= 0 && bearer > resilience, string.Join(" -> ", chain.Select(t => t.Name)));
+    }
+
+    [Fact]
+    public void AuthClient_HasNoBearerHandler()
+    {
+        HttpMessageHandler handler = _services.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler("IAuthClient");
+        while (handler is DelegatingHandler delegating)
+        {
+            Assert.IsNotType<BearerTokenHandler>(delegating);
+            handler = delegating.InnerHandler!;
+        }
+    }
+
+    [Theory]
+    [InlineData(nameof(IProductsClient))]
+    [InlineData(nameof(ICategoriesClient))]
+    [InlineData("IAuthClient")]
+    public void UpstreamClients_HaveTimingHandlerOutermost(string clientName)
+    {
+        // ADR-0015: outermost, so the logged time covers retries, the token and the 401 resend.
+        var chain = new List<Type>();
+        HttpMessageHandler handler = _services.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(clientName);
+        while (handler is DelegatingHandler delegating)
+        {
+            chain.Add(delegating.GetType());
+            handler = delegating.InnerHandler!;
+        }
+
+        var timing = chain.IndexOf(typeof(UpstreamTimingHandler));
+        var resilience = chain.FindIndex(t => t.Name.Contains("Resilience", StringComparison.Ordinal));
+        Assert.True(timing >= 0 && (resilience < 0 || timing < resilience), string.Join(" -> ", chain.Select(t => t.Name)));
+        Assert.Single(chain, t => t == typeof(UpstreamTimingHandler));
+    }
+}

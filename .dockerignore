@@ -1,0 +1,18 @@
+# Only sources, project files, lock files and shared props reach the build context.
+**/bin/
+**/obj/
+**/TestResults/
+**/*.user
+.git/
+.github/
+.githooks/
+.vs/
+.vscode/
+.idea/
+artifacts/
+docs/
+tests/
+.env
+**/Dockerfile
+docker-compose*.yml
+*.md

@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      nuget:
+        patterns: ["*"]
+    ignore:
+      # The .NET major version is a deliberate choice; Microsoft packages get minor and patch updates only.
+      - dependency-name: "Microsoft.*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories:
+      - "/"
+      - "/mocks/CSharpApp.UpstreamMock"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    ignore:
+      # The .NET major version is a deliberate choice.
+      - dependency-name: "dotnet/*"
+        update-types: ["version-update:semver-major"]

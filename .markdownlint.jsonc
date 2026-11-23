@@ -1,0 +1,8 @@
+// markdownlint rules for the README, ADRs and the assumptions register.
+{
+  "default": true,
+  // Prose wraps at 120; long table rows and code lines are allowed.
+  "MD013": { "line_length": 120, "tables": false, "code_blocks": false },
+  // Compact `|---|` tables are used throughout; the column-style rule flags them.
+  "MD060": false
+}
