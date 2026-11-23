@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using CSharpApp.Core.Dtos;
+using CSharpApp.Core.Exceptions;
 using CSharpApp.Core.Settings;
 using CSharpApp.Infrastructure.Clients;
 using CSharpApp.TestData.Builders;
@@ -106,21 +107,59 @@ public sealed class ProductsClientTests
     }
 
     [Fact]
-    public async Task GetById_NullBody_ThrowsJsonException()
+    public async Task NullBody_MapsToContractError()
     {
         var handler = StubHttpMessageHandler.Json("null");
 
-        await Assert.ThrowsAsync<JsonException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
+        await Assert.ThrowsAsync<UpstreamContractException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
+    }
+
+    [Theory]
+    [InlineData("{not json")]
+    [InlineData("")]
+    [InlineData("[1,2]")]
+    public async Task MalformedBody_MapsToContractError(string body)
+    {
+        var handler = StubHttpMessageHandler.Json(body);
+
+        await Assert.ThrowsAsync<UpstreamContractException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
     }
 
     [Fact]
-    public async Task GetById_Upstream500_ThrowsHttpRequestException()
+    public async Task GetById_Upstream500_ThrowsUnavailable()
     {
         var handler = StubHttpMessageHandler.Json("""{"message":"boom"}""", HttpStatusCode.InternalServerError);
 
-        var error = await Assert.ThrowsAsync<HttpRequestException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
+        var error = await Assert.ThrowsAsync<UpstreamUnavailableException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
 
-        Assert.Equal(HttpStatusCode.InternalServerError, error.StatusCode);
+        Assert.DoesNotContain("boom", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetById_Upstream400EntityNotFound_ThrowsNotFound()
+    {
+        var handler = StubHttpMessageHandler.Json("""{"name":"EntityNotFoundError","message":"Could not find"}""", HttpStatusCode.BadRequest);
+
+        await Assert.ThrowsAsync<UpstreamNotFoundException>(() => CreateClient(handler).GetByIdAsync(999, Ct));
+    }
+
+    [Fact]
+    public async Task Create_Upstream400_ThrowsBadRequest()
+    {
+        var handler = StubHttpMessageHandler.Json("""{"message":["price must be a positive number"]}""", HttpStatusCode.BadRequest);
+
+        await Assert.ThrowsAsync<UpstreamBadRequestException>(() =>
+            CreateClient(handler).CreateAsync(new NewProduct("Lamp", 1m, "A lamp", 1, ["https://images.test/lamp.png"]), Ct));
+    }
+
+    [Fact]
+    public async Task GetAll_ConnectionRefused_ThrowsUnavailable()
+    {
+        var handler = new StubHttpMessageHandler((_, _) => throw new HttpRequestException("Connection refused"));
+
+        var error = await Assert.ThrowsAsync<UpstreamUnavailableException>(() => CreateClient(handler).GetAllAsync(0, 20, Ct));
+
+        Assert.IsType<HttpRequestException>(error.InnerException);
     }
 
     [Fact]

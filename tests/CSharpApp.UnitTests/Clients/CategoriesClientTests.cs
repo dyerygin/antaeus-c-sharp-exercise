@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using CSharpApp.Core.Dtos;
+using CSharpApp.Core.Exceptions;
 using CSharpApp.Infrastructure.Clients;
 using CSharpApp.TestData.Builders;
 using CSharpApp.UnitTests.TestDoubles;
@@ -67,10 +68,26 @@ public sealed class CategoriesClientTests
     }
 
     [Fact]
-    public async Task GetById_NullBody_ThrowsJsonException()
+    public async Task GetById_NullBody_ThrowsContractError()
     {
         var handler = StubHttpMessageHandler.Json("null");
 
-        await Assert.ThrowsAsync<JsonException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
+        await Assert.ThrowsAsync<UpstreamContractException>(() => CreateClient(handler).GetByIdAsync(1, Ct));
+    }
+
+    [Fact]
+    public async Task GetById_Upstream400EntityNotFound_ThrowsNotFound()
+    {
+        var handler = StubHttpMessageHandler.Json("""{"name":"EntityNotFoundError","message":"Could not find"}""", HttpStatusCode.BadRequest);
+
+        await Assert.ThrowsAsync<UpstreamNotFoundException>(() => CreateClient(handler).GetByIdAsync(999, Ct));
+    }
+
+    [Fact]
+    public async Task GetAll_ConnectionRefused_ThrowsUnavailable()
+    {
+        var handler = new StubHttpMessageHandler((_, _) => throw new HttpRequestException("Connection refused"));
+
+        await Assert.ThrowsAsync<UpstreamUnavailableException>(() => CreateClient(handler).GetAllAsync(20, Ct));
     }
 }

@@ -10,6 +10,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Unit tests exercise the internal response mapping directly. -->
+    <InternalsVisibleTo Include="CSharpApp.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CSharpApp.Core\CSharpApp.Core.csproj" />
   </ItemGroup>
 

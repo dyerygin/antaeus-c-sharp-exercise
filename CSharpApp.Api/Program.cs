@@ -1,3 +1,4 @@
+using CSharpApp.Api;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using Serilog.Events;
@@ -22,7 +23,7 @@ try
         .BindConfiguration(PagingSettings.SectionName)
         .ValidateDataAnnotations()
         .ValidateOnStart();
-    builder.Services.AddProblemDetails();
+    builder.Services.AddApi();
     builder.Services.AddApiVersioning(options => options.ApiVersionReader = new UrlSegmentApiVersionReader());
 
     var app = builder.Build();
@@ -41,6 +42,10 @@ try
             new("Elapsed", new ScalarValue(elapsed)),
         ];
     });
+
+    // R21 order: errors become ProblemDetails (ADR-0005); bare 4xx/5xx without a body get one as well.
+    app.UseExceptionHandler();
+    app.UseStatusCodePages();
 
     if (app.Environment.IsDevelopment())
     {

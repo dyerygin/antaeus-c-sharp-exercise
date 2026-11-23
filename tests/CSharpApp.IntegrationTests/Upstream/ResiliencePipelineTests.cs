@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CSharpApp.Core.Dtos;
+using CSharpApp.Core.Exceptions;
 using CSharpApp.Core.Interfaces;
 using CSharpApp.Infrastructure;
 using CSharpApp.TestData.Builders;
@@ -51,7 +52,7 @@ public sealed class ResiliencePipelineTests : IDisposable
             .RespondWith(Response.Create().WithStatusCode(500));
         var client = _services.GetRequiredService<IProductsClient>();
 
-        await Assert.ThrowsAsync<HttpRequestException>(() =>
+        await Assert.ThrowsAsync<UpstreamUnavailableException>(() =>
             client.CreateAsync(new NewProduct("Lamp", 10m, "A lamp", 1, ["https://images.test/lamp.png"]), Ct));
 
         Assert.Single(_upstream.LogEntries);
