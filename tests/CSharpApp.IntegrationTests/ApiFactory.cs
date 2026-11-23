@@ -6,7 +6,7 @@ using WireMock.Server;
 namespace CSharpApp.IntegrationTests;
 
 /// <summary>
-/// The API in-process with its upstream replaced by WireMock on a random port: test credentials, short timeouts, no
+/// The API in-process with its upstream replaced by WireMock on a random port: test credentials, fast retries, no
 /// user-secrets and never the local mock on 5081, so tests run the same on any machine and in CI.
 /// </summary>
 public sealed class ApiFactory : WebApplicationFactory<Program>
@@ -26,8 +26,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
                 ["RestApiSettings:Username"] = "user@test",
                 ["RestApiSettings:Password"] = "test-password",
                 ["HttpClientSettings:RetryBaseDelayMs"] = "1",
-                ["HttpClientSettings:AttemptTimeoutSeconds"] = "1",
-                ["HttpClientSettings:TotalTimeoutSeconds"] = "3",
+                // Generous on purpose: a cold host under a parallel test run can take over a second for its first call,
+                // and a POST is never retried. Timeout tests set their own short values.
+                ["HttpClientSettings:AttemptTimeoutSeconds"] = "5",
+                ["HttpClientSettings:TotalTimeoutSeconds"] = "10",
             })
             .AddInMemoryCollection(Settings));
     }

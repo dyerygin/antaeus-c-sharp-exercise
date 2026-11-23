@@ -59,6 +59,7 @@ public sealed class ErrorMappingTests : IAsyncLifetime
     public async Task GetProducts_UpstreamDelayBeyondTimeout_Returns504()
     {
         _factory.Settings["HttpClientSettings:TotalTimeoutSeconds"] = "1";
+        _factory.Settings["HttpClientSettings:AttemptTimeoutSeconds"] = "1";
         _factory.Upstream.Given(WireMock.RequestBuilders.Request.Create().WithPath("/api/v1/products").UsingGet())
             .RespondWith(WireMock.ResponseBuilders.Response.Create().WithStatusCode(200).WithBody("[]").WithDelay(TimeSpan.FromSeconds(3)));
         using var client = _factory.CreateClient();
