@@ -1,4 +1,5 @@
 using CSharpApp.Api;
+using CSharpApp.Api.Middleware;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using Serilog.Events;
@@ -46,6 +47,12 @@ try
     // R21 order: errors become ProblemDetails (ADR-0005); bare 4xx/5xx without a body get one as well.
     app.UseExceptionHandler();
     app.UseStatusCodePages();
+    app.UseMiddleware<SecurityHeadersMiddleware>();
+    if (!app.Environment.IsDevelopment())
+    {
+        // ASM-09: TLS ends at a reverse proxy; HSTS is sent only on HTTPS requests, so it is inert on plain HTTP.
+        app.UseHsts();
+    }
 
     if (app.Environment.IsDevelopment())
     {
